@@ -1,3 +1,6 @@
 Phase 1 -- Task 1
 1. .env file is always outside the src folder casue dotenv loads .end from the root folder
 2. Always first improt dotenv befoer any other import so that all the env variables are loaded first 
+
+Phase 2 -- Task 6
+3. variable declared using const cannot be changed 
