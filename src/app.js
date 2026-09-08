@@ -3,27 +3,85 @@ import {WebSocketServer , WebSocket} from "ws"
 import http from "http"
 
 import express from "express"
+import { clearInterval } from "timers"
 const app = express()
 const port = process.env.PORT || 8000
 const rooms  = {}  // why Object not ARRAY CAUSE --> Searching iin object is easier no need for looping direct search happend TC is O(1) 
 app.use(express.json())
+
+//States of the room
+const ROOM_STATES = {
+    waiting : "WAITING",
+    drawing : "DRAWING",
+    round_ended : "ROUND_ENDED"
+}
+
 app.get("/" , (req,res) => {
     res.send("yo yo")
 })
 function generateRoomId(){
     return Math.random().toString(36).substring(2, 7).toUpperCase();
 }
+
+function timer(room){
+    let time = 10
+    const timer = setInterval(() => {
+        for(const player of room.players){
+            if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                player.socket.send(JSON.stringify({
+                    type : "time-ticking",
+                    time : time
+                }))
+            }
+        }
+        time--
+        if(time<=0){
+            clearInterval(timer)
+            room.state = ROOM_STATES.round_ended
+            for(const player of room.players){
+                if(player.socket && player.socket.readyState === player.playerId){
+                    player.socket.send(JSON.stringify({
+                        message : "Aye kya rheee lawdee!!",
+                        word : "apple"
+                    }))
+                }
+            }
+        }
+
+    }, 1000);
+}
+// function timer(player,roomId){
+//     // others see the timer and msg that game has stated
+//             let time = 10;
+//             const timer = setInterval(() => {
+//             console.log(time);
+//             player.socket.send(JSON.stringify({
+//                 time    
+//             }))
+//             time--;
+
+//             if(time<=0){
+//                 clearInterval(timer);
+//                 player.socket.send(JSON.stringify({
+//                     message : "Times up mate!!!",
+//                     word : "apple"
+//             }))
+//             }
+//         }, 1000);
+//         rooms[roomId].state = ROOM_STATES.round_ended
+// }
 app.get("/rooms" , (req,res) => {
     //for storing multiple rooms create a js object   
     // for current room making generate a unique id
-    const roomId = generateRoomId()
+    let  roomId = generateRoomId()
     // check if the id exists for enyother room
     while(rooms[roomId]){
         roomId = generateRoomId()
     } 
     // create playes for that rooom
     rooms[roomId] = {
-        players : []
+        players : [],
+        state : ROOM_STATES.waiting
     } 
     //return room id
     return res.status(201).json({
@@ -111,14 +169,59 @@ wss.on("connection" , (socket,request)=> {
     // })
     socket.on("close" , () => {
         console.log(`Player with id ${playerId} has disconnected from room ${roomId}`)
-        const playerIndex = room.players.findIndex(
-            (player) => player.playerId == playerId
-        )
-        if(playerIndex !== -1){
-            room.players.splice(playerIndex , 1)
-        }
+        const player = room.players.find(
+            (player) => player.playerId === playerId
+        )//DONT DELETE PERSON IMM AFTER DISCONNECTION GIVE CHANCE TO RECONNECT
+        // if(playerIndex !== -1){
+        //     room.players.splice(playerIndex , 1)
+        // }
+        if(!player){
+            return;
+        }        
+        player.socket = null
     })
+    
+//2+ Players then start the game
+    const connectedPlayers = room.players.filter(
+        (player) => player.socket && 
+                    player.socket.readyState === WebSocket.OPEN
+    )
+    // for(const player of room.players){
+    //     if(player.socket && player.socket.readyState === WebSocket.OPEN){
+
+    //     }
+    // }
+    const playersCount = connectedPlayers.length
+    if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
+        // Give player 1 drawer rights 
+        rooms[roomId].state = ROOM_STATES.drawing
+        const drawer = connectedPlayers[0]
+        // only he sees the word
+        drawer.socket.send(JSON.stringify({
+            word : "apple"
+        }))
+        
+        for(const player of room.players){
+                if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                    if(player.playerId !== playerId){
+                        player.socket.send(JSON.stringify({
+                        message : "Game has fucking started"
+                    }))}
+            }
+          console.log("Its not what a person says its who is saying that")  
+        }
+        console.log("Hum pe toh hai hi nooo!!")
+        timer(room)
+        
+    }
+
+    
+    
+
+
+// others see the timer and msg that game has stated
 })
+
 
 server.listen(port ,() =>{
     console.log("Server has started you little brattt!!!")
