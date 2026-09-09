@@ -245,8 +245,15 @@ wss.on("connection" , (socket,request)=> {
         //T - 1 frtonend sends message , stroke events tell backend if drawing 
         socket.on("message", (data) =>{
             //Authorizing the drawer    
-            if(playerId === drawer.playerId){
-
+            if(playerId !== drawer.playerId){
+                console.log("Only drawer has the permission")
+                return
+                }
+            if(room.strokes.length > 0){
+                for(const m of room.strokes){
+                    player.socket.send(JSON.stringify(msg))
+                }
+            }
             
             const message = JSON.parse(data)
             if(message.type !== STROKE_EVENTS.POINT){
@@ -254,6 +261,7 @@ wss.on("connection" , (socket,request)=> {
             }
             //storing the messages for later users 
         room.strokes.push(message)
+        //Should i apply nested loop here ?
         for(const player of room.players){
             if(player.socket &&
                 player.socket.readyState === WebSocket.OPEN &&
@@ -262,7 +270,7 @@ wss.on("connection" , (socket,request)=> {
                 
             }
         }
-    }
+    
         })
         
     }
@@ -279,3 +287,5 @@ server.listen(port ,() =>{
     console.log("Server has started you little brattt!!!")
 } )
 export {app}
+
+
