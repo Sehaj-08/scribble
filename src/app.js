@@ -25,7 +25,7 @@ function generateRoomId(){
 
 function timer(room){
     let time = 10
-    const timer = setInterval(() => {
+    room.timer = setInterval(() => {
         for(const player of room.players){
             if(player.socket && player.socket.readyState === WebSocket.OPEN){
                 player.socket.send(JSON.stringify({
@@ -36,7 +36,7 @@ function timer(room){
         }
         time--
         if(time<=0){
-            clearInterval(timer)
+            clearInterval(room.timer)
             room.state = ROOM_STATES.round_ended
             for(const player of room.players){
                 if(player.socket && player.socket.readyState === player.playerId){
@@ -109,7 +109,7 @@ app.post("/join_rooms/:room_id" , (req,res) => {
 
 })
 
-app.get("/get_all_rooms" , (req,res) => {
+app.get("/get_all_rooms/:current_room_id" , (req,res) => {
     return res.status(200).json({
         rooms
     })
@@ -167,6 +167,9 @@ wss.on("connection" , (socket,request)=> {
     //     )
     //     console.log("Hey you lill fuck!!" , player)
     // })
+    //2+ Players then start the game
+    
+
     socket.on("close" , () => {
         console.log(`Player with id ${playerId} has disconnected from room ${roomId}`)
         const player = room.players.find(
@@ -179,18 +182,37 @@ wss.on("connection" , (socket,request)=> {
             return;
         }        
         player.socket = null
-    })
-    
-//2+ Players then start the game
-    const connectedPlayers = room.players.filter(
+
+        const recalculatingConnectedPlayers = room.players.filter(
         (player) => player.socket && 
                     player.socket.readyState === WebSocket.OPEN
     )
+        if(recalculatingConnectedPlayers.length <= 1){
+            clearInterval(room.timer)
+            room.timer = null
+            console.log(room.timer)
+            room.state = ROOM_STATES.round_ended;
+            for(const player of room.players){
+                if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                    player.socket.send(JSON.stringify({
+                        message : "Round ended fuck you"
+                    }))
+                }   
+            }
+        }
+    })
+    
+
     // for(const player of room.players){
     //     if(player.socket && player.socket.readyState === WebSocket.OPEN){
 
     //     }
     // }
+    const connectedPlayers = room.players.filter(
+        (player) => player.socket && 
+                    player.socket.readyState === WebSocket.OPEN
+    )
+    
     const playersCount = connectedPlayers.length
     if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
         // Give player 1 drawer rights 
