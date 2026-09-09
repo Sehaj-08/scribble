@@ -16,6 +16,11 @@ const ROOM_STATES = {
     round_ended : "ROUND_ENDED"
 }
 
+const STROKE_EVENTS = {
+    POINT : "stroke_point",
+    END : "stroke_end"
+}
+
 app.get("/" , (req,res) => {
     res.send("yo yo")
 })
@@ -212,7 +217,7 @@ wss.on("connection" , (socket,request)=> {
         (player) => player.socket && 
                     player.socket.readyState === WebSocket.OPEN
     )
-    
+
     const playersCount = connectedPlayers.length
     if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
         // Give player 1 drawer rights 
@@ -234,6 +239,28 @@ wss.on("connection" , (socket,request)=> {
         }
         console.log("Hum pe toh hai hi nooo!!")
         timer(room)
+
+        //Phase 3 starts 
+        //T - 1 frtonend sends message , stroke events tell backend if drawing 
+        socket.on("message", (data) =>{
+            if(playerId === drawer.playerId){
+
+            
+            const message = JSON.parse(data)
+            if(message.type !== STROKE_EVENTS.POINT){
+                return;
+            }
+        
+        for(const player of room.players){
+            if(player.socket &&
+                player.socket.readyState === WebSocket.OPEN &&
+                 player.playerId !== drawer.playerId){
+                    player.socket.send(JSON.stringify(message))
+                
+            }
+        }
+    }
+        })
         
     }
 
