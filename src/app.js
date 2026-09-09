@@ -86,7 +86,8 @@ app.get("/rooms" , (req,res) => {
     // create playes for that rooom
     rooms[roomId] = {
         players : [],
-        state : ROOM_STATES.waiting
+        state : ROOM_STATES.waiting,
+        strokes : []
     } 
     //return room id
     return res.status(201).json({
@@ -243,6 +244,7 @@ wss.on("connection" , (socket,request)=> {
         //Phase 3 starts 
         //T - 1 frtonend sends message , stroke events tell backend if drawing 
         socket.on("message", (data) =>{
+            //Authorizing the drawer    
             if(playerId === drawer.playerId){
 
             
@@ -250,7 +252,8 @@ wss.on("connection" , (socket,request)=> {
             if(message.type !== STROKE_EVENTS.POINT){
                 return;
             }
-        
+            //storing the messages for later users 
+        room.strokes.push(message)
         for(const player of room.players){
             if(player.socket &&
                 player.socket.readyState === WebSocket.OPEN &&
