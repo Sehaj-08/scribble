@@ -21,6 +21,9 @@ const STROKE_EVENTS = {
     END : "stroke_end"
 }
 
+const GUESS_EVENTS =  {    //checkign the type of incoming req and matching with this
+    GUESS : "guess"
+}
 app.get("/" , (req,res) => {
     res.send("yo yo")
 })
@@ -221,12 +224,31 @@ wss.on("connection" , (socket,request)=> {
 
     const playersCount = connectedPlayers.length
     if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
+        //ROUND STARTS
+        room.strokes.length = 0
+        //here create a random word for sending to the players 
         // Give player 1 drawer rights 
         rooms[roomId].state = ROOM_STATES.drawing
         const drawer = connectedPlayers[0]
+        const animals = [
+                "Capybara",
+                "Axolotl",
+                "Pangolin",
+                "Meerkat",
+                "Wombat",
+                "Narwhal",
+                "Lemur",
+                "Platypus",
+                "Fennec",
+                "Quokka"
+                        ];
+        const animalIndex = Math.floor(Math.random() * 10);
+
         // only he sees the word
+        const word = animals[animalIndex].trim().toLowerCase()
+        room.word = word
         drawer.socket.send(JSON.stringify({
-            word : "apple"
+            word 
         }))
         
         for(const player of room.players){
@@ -250,14 +272,14 @@ wss.on("connection" , (socket,request)=> {
                 return
                 }
             if(room.strokes.length > 0){
-                for(const m of room.strokes){
+                for(const msg of room.strokes){
                     player.socket.send(JSON.stringify(msg))
                 }
             }
             
             const message = JSON.parse(data)
             if(message.type !== STROKE_EVENTS.POINT){
-                return;
+                return; 
             }
             //storing the messages for later users 
         room.strokes.push(message)
@@ -269,6 +291,27 @@ wss.on("connection" , (socket,request)=> {
                     player.socket.send(JSON.stringify(message))
                 
             }
+        }
+        //for checking if the word sent by the player matches 
+        if(message.type === GUESS_EVENTS.GUESS){
+            if(!message.text){
+                console.log("No message received")
+                return
+            }
+            const guess = message.text.trim().toLowerCase();
+            const currentWord = room.word
+            // find player so that if word is correct we can add an indentifier to him 
+            const player = room.players.find(
+                (player) => player.playerId === playerId
+            )
+            if(guess === currentWord){
+                isGuessed = True
+                player.hasGuessed = True
+                console.log("Correct guess")
+            }else{
+                console.log("Wrong guess")
+            }
+         
         }
     
         })
