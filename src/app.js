@@ -229,6 +229,7 @@ wss.on("connection" , (socket,request)=> {
         //
         for(const player of room.players){
             player.hasGuessed = false
+            player.score = 0
         }
     
         //here create a random word for sending to the players 
@@ -325,8 +326,8 @@ wss.on("connection" , (socket,request)=> {
 
                 //Scoring rules 
                 let points = room.time
-                player.points += points
-                
+                player.score += points
+
                 console.log("Correct guess")
             }else{
                 console.log("Wrong guess")
