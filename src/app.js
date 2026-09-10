@@ -32,18 +32,18 @@ function generateRoomId(){
 }
 
 function timer(room){
-    let time = 10
+    room.time = 10
     room.timer = setInterval(() => {
         for(const player of room.players){
             if(player.socket && player.socket.readyState === WebSocket.OPEN){
                 player.socket.send(JSON.stringify({
                     type : "time-ticking",
-                    time : time
+                    time : room.time
                 }))
             }
         }
-        time--
-        if(time<=0){
+        room.time--
+        if(room.time<=0){
             clearInterval(room.timer)
             room.state = ROOM_STATES.round_ended
             for(const player of room.players){
@@ -226,6 +226,11 @@ wss.on("connection" , (socket,request)=> {
     if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
         //ROUND STARTS
         room.strokes.length = 0
+        //
+        for(const player of room.players){
+            player.hasGuessed = false
+        }
+    
         //here create a random word for sending to the players 
         // Give player 1 drawer rights 
         rooms[roomId].state = ROOM_STATES.drawing
@@ -305,11 +310,31 @@ wss.on("connection" , (socket,request)=> {
                 (player) => player.playerId === playerId
             )
             if(guess === currentWord){
-                isGuessed = True
-                player.hasGuessed = True
+                //stopping player from guessing more than one time
+                if(player.hasGuessed){
+                    console.log("You have already guessed the word")
+                    return; 
+                }
+                player.hasGuessed = true
+                //broadcast the correc guess message to all 
+                for(const player of room.players){
+                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                        player.socket.send("Word Guessed Correctly")
+                    }
+                }
+
+                //Scoring rules 
+                let points = room.time
+                player.points += points
+                
                 console.log("Correct guess")
             }else{
                 console.log("Wrong guess")
+                for(const player of room.players){
+                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                        player.socket.send(JSON.stringify(guess))
+                    }
+                }
             }
          
         }
