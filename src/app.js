@@ -47,7 +47,7 @@ function timer(room){
             clearInterval(room.timer)
             room.state = ROOM_STATES.round_ended
             for(const player of room.players){
-                if(player.socket && player.socket.readyState === player.playerId){
+                if(player.socket && player.socket.readyState === WebSocket.OPEN){
                     player.socket.send(JSON.stringify({
                         message : "Aye kya rheee lawdee!!",
                         word : "apple"
@@ -300,7 +300,13 @@ wss.on("connection" , (socket,request)=> {
         }
         //for checking if the word sent by the player matches 
         if(message.type === GUESS_EVENTS.GUESS){
-            if(!message.text){
+            //first check if the room even exists or not 
+            if(room.state === ROOM_STATES.round_ended){
+                    console.log("Round has already ended")
+                    return
+                }
+            // 
+            if(!message.text || drawer.playerId === playerId){
                 console.log("No message received")
                 return
             }
@@ -316,11 +322,15 @@ wss.on("connection" , (socket,request)=> {
                     console.log("You have already guessed the word")
                     return; 
                 }
+                
                 player.hasGuessed = true
                 //broadcast the correc guess message to all 
-                for(const player of room.players){
-                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        player.socket.send("Word Guessed Correctly")
+                for(const players of room.players){
+                    if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                        players.socket.send(JSON.stringify({
+                            type : "correct_guess",
+                            player : players.playerId
+                        }))
                     }
                 }
 
@@ -333,7 +343,11 @@ wss.on("connection" , (socket,request)=> {
                 console.log("Wrong guess")
                 for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        player.socket.send(JSON.stringify(guess))
+                        player.socket.send(JSON.stringify({
+                            type : "chat",
+                            text : guess ,
+                            playerId : player.playerId                       
+                        }))
                     }
                 }
             }
