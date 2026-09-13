@@ -79,6 +79,26 @@ function disconnection(playerId , room , roomId ){
                 }
             }
 }
+function syncStrokes(room, player){
+    if(room.strokes.length === 0){
+        return;
+    }
+    let count = room.strokes.length - 1
+    const lastStroke = room.strokes[count].strokeId
+    if(lastStroke !== player.lastStrokeId){
+        const missingStrokes = room.strokes.filter(
+        (stroke) => stroke.strokeId > player.lastStrokeId
+    )
+    for(const stroke of missingStrokes){
+        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+            player.socket.send(JSON.stringify(stroke))
+            player.lastStrokeId = stroke.strokeId  
+        }
+    }
+    }
+    
+}
+
 
 function handleStrokes(room , playerId , drawerId , message){
     //Authorizing the drawer    
@@ -117,25 +137,6 @@ function handleStrokes(room , playerId , drawerId , message){
             }
 }
 
-function syncStrokes(room, player){
-    if(room.strokes.length === 0){
-        return;
-    }
-    let count = room.strokes.length - 1
-    const lastStroke = room.strokes[count].strokeId
-    if(lastStroke !== player.lastStrokeId){
-        const missingStrokes = room.strokes.filter(
-        (stroke) => stroke.strokeId > player.lastStrokeId
-    )
-    for(const stroke of missingStrokes){
-        if(player.socket && player.socket.readyState === WebSocket.OPEN){
-            player.socket.send(JSON.stringify(stroke))
-            player.lastStrokeId = stroke.strokeId  
-        }
-    }
-    }
-    
-}
 
 function checkGuess(data , room, playerId ,drawerId ){
     const message = JSON.parse(data)
@@ -195,4 +196,4 @@ function checkGuess(data , room, playerId ,drawerId ){
              
             }
 }
-export {timer, disconnection , handleStrokes ,checkGuess}
+export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes}

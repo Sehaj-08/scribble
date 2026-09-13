@@ -1,7 +1,7 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS} from "../config/constants.js"
-import {timer , disconnection ,  handleStrokes , checkGuess} from "../services/gameServices.js" 
+import {timer , disconnection ,  handleStrokes , checkGuess , syncStrokes} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -79,7 +79,7 @@ export function initWebSockets(server){
             //here create a random word for sending to the players 
             // Give player 1 drawer rights 
             rooms[roomId].state = ROOM_STATES.drawing
-            const drawer = connectedPlayers[0]
+            room.drawerId = connectedPlayers[0].playerId
             const animals = [
                     "Capybara",
                     "Axolotl",
@@ -126,11 +126,12 @@ export function initWebSockets(server){
             }
             
             if(message.type===STROKE_EVENTS.POINT){
-                handleStrokes(room , playerId  ,drawer.playerId , message)
+                syncStrokes(room , player)
+                handleStrokes(room , playerId  ,room.drawerId , message)
             //for checking if the word sent by the player matches
             }
             if(message.type === GUESS_EVENTS.GUESS) 
-                checkGuess(data, room , playerId , drawer.playerId)
+                checkGuess(data, room , playerId , room.drawerId)
         
             })
     
