@@ -1,7 +1,7 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS} from "../config/constants.js"
-import {timer} from "../services/gameServices.js" 
+import {timer , disconnection ,  handleStrokes , checkGuess} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -13,6 +13,7 @@ export function initWebSockets(server){
         console.log("WebSockets connection")
         console.log("Room ID" , roomId)
         console.log("Player ID" , playerId)
+
     
         const room = rooms[roomId]
         if(!room){
@@ -57,35 +58,7 @@ export function initWebSockets(server){
         
         //Disconnection logic 
         socket.on("close" , () => {
-            console.log(`Player with id ${playerId} has disconnected from room ${roomId}`)
-            const player = room.players.find(
-                (player) => player.playerId === playerId
-            )//DONT DELETE PERSON IMM AFTER DISCONNECTION GIVE CHANCE TO RECONNECT
-            // if(playerIndex !== -1){
-            //     room.players.splice(playerIndex , 1)
-            // }
-            if(!player){
-                return;
-            }        
-            player.socket = null
-    
-            const recalculatingConnectedPlayers = room.players.filter(
-            (player) => player.socket && 
-                        player.socket.readyState === WebSocket.OPEN
-        )
-            if(recalculatingConnectedPlayers.length <= 1){
-                clearInterval(room.timer)
-                room.timer = null
-                console.log(room.timer)
-                room.state = ROOM_STATES.round_ended;
-                for(const player of room.players){
-                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        player.socket.send(JSON.stringify({
-                            message : "Round ended fuck you"
-                        }))
-                    }   
-                }
-            }
+            disconnection(playerId,room,roomId)
         })
         //ROUND START LOGIC
         const connectedPlayers = room.players.filter(
@@ -128,6 +101,7 @@ export function initWebSockets(server){
                 word 
             }))
             
+            //i think we hhave to take this block out of the if condition
             for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
                         if(player.playerId !== playerId){
@@ -142,92 +116,23 @@ export function initWebSockets(server){
     
             //Phase 3 starts 
             //T - 1 frtonend sends message , stroke events tell backend if drawing 
-            socket.on("message", (data) =>{
-                //Authorizing the drawer    
-                if(playerId !== drawer.playerId){
-                    console.log("Only drawer has the permission")
-                    return
-                    }
-                if(room.strokes.length > 0){
-                    for(const msg of room.strokes){
-                        player.socket.send(JSON.stringify(msg))
-                    }
-                }
-                
-                const message = JSON.parse(data)
-                if(message.type !== STROKE_EVENTS.POINT){
-                 
-                
-                //storing the messages for later users 
-            room.strokes.push(message)
-            //Should i apply nested loop here ?
-            for(const player of room.players){
-                if(player.socket &&
-                    player.socket.readyState === WebSocket.OPEN &&
-                     player.playerId !== drawer.playerId){
-                        player.socket.send(JSON.stringify(message))
-                    
-                }
-            }}
-            //for checking if the word sent by the player matches 
-            if(message.type === GUESS_EVENTS.GUESS){
-                //first check if the room even exists or not 
-                if(room.state === ROOM_STATES.round_ended){
-                        console.log("Round has already ended")
-                        return
-                    }
-                // 
-                if(!message.text || drawer.playerId === playerId){
-                    console.log("No message received")
-                    return
-                }
-                const guess = message.text.trim().toLowerCase();
-                const currentWord = room.word
-                // find player so that if word is correct we can add an indentifier to him 
-                const player = room.players.find(
-                    (player) => player.playerId === playerId
-                )
-                if(guess === currentWord){
-                    //stopping player from guessing more than one time
-                    if(player.hasGuessed){
-                        console.log("You have already guessed the word")
-                        return; 
-                    }
-                    
-                    player.hasGuessed = true
-                    //broadcast the correc guess message to all 
-                    for(const players of room.players){
-                        if(players.socket && players.socket.readyState === WebSocket.OPEN){
-                            players.socket.send(JSON.stringify({
-                                type : "correct_guess",
-                                player : players.playerId
-                            }))
-                        }
-                    }
-    
-                    //Scoring rules 
-                    let points = room.time
-                    player.score += points
-    
-                    console.log("Correct guess")
-                }else{
-                    console.log("Wrong guess")
-                    for(const player of room.players){
-                        if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                            player.socket.send(JSON.stringify({
-                                type : "chat",
-                                text : guess ,
-                                playerId : player.playerId                       
-                            }))
-                        }
-                    }
-                }
-             
-            }
-        
-            })
+            
             
         }
+        socket.on("message", (data) =>{
+            const message =  JSON.parse(data)
+            if(!message){
+                console.log("No message received")
+            }
+            
+            if(message.type===STROKE_EVENTS.POINT){
+                handleStrokes(room , playerId  ,drawer.playerId , message)
+            //for checking if the word sent by the player matches
+            }
+            if(message.type === GUESS_EVENTS.GUESS) 
+                checkGuess(data, room , playerId , drawer.playerId)
+        
+            })
     
         
         
