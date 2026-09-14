@@ -1,3 +1,104 @@
+import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
+import { WebSocketServer , WebSocket } from "ws";
+
+function startRound(room , playerId){
+    //ROUND START LOGIC
+    if(room.currentRounds > room.totalRounds){
+        console.log("Game gas ended")
+        return;
+    }
+        const connectedPlayers = room.players.filter(
+            (player) => player.socket && 
+                        player.socket.readyState === WebSocket.OPEN
+        )
+    
+        const playersCount = connectedPlayers.length
+        if(room.state === ROOM_STATES.waiting && playersCount >= 2){
+            //ROUND STARTS
+            room.strokes.length = 0
+            room.currentRounds += 1
+            //
+            for(const player of room.players){
+                player.hasGuessed = false
+                
+            }
+        
+            //here create a random word for sending to the players 
+            // Give player 1 drawer rights 
+            // rooms[roomId].state = ROOM_STATES.drawing
+            room.drawer = connectedPlayers[0]
+            room.state = ROOM_STATES.choosing_words // only after word has been choose room's state can be drawing 
+            const animals = [
+                    "Capybara",
+                    "Axolotl",
+                    "Pangolin",
+                    "Meerkat",
+                    "Wombat",
+                    "Narwhal",
+                    "Lemur",
+                    "Platypus",
+                    "Fennec",
+                    "Quokka"
+                            ];
+            const candidateWordIndex1 = Math.floor(Math.random() * 10);
+            const candidateWordIndex2 = Math.floor(Math.random() * 10);
+             //add a check for if the candidate words are the fucking same
+            while(candidateWordIndex2 === candidateWordIndex1){
+                candidateWordIndex2 = Math.floor(Math.random() * 10)
+            }
+            const candidateWordIndex3 = Math.floor(Math.random() * 10);
+            while(candidateWordIndex3 === candidateWordIndex2){
+                candidateWordIndex3 = Math.floor(Math.random() * 10)
+            }
+            while(candidateWordIndex1 === candidateWordIndex3){
+                candidateWordIndex3 = Math.floor(Math.random() * 10)
+            }
+            room.candidateArray = [
+                {
+                    wordId : candidateWordIndex1,
+                    word : animals[candidateWordIndex1]
+                },{
+                    wordId : candidateWordIndex2,
+                    word : animals[candidateWordIndex2]
+                },{
+                    wordId : candidateWordIndex3,
+                    word : animals[candidateWordIndex3]
+                }
+            ]
+           //sending these candidate words to the frontend
+            const wordChoiceMessage = {
+                type : "word_choice",
+                words : room.candidateArray
+            }
+            // only drawer sees the word
+            if(room.drawer.socket && room.drawer.socket.readyState === WebSocket.OPEN){
+            room.drawer.socket.send(JSON.stringify(wordChoiceMessage))
+            }
+
+    
+            
+            
+          
+            //i think we hhave to take this block out of the if condition
+            for(const player of room.players){
+                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                        if(player.playerId !== playerId){
+                            player.socket.send(JSON.stringify({
+                            message : "Game has fucking started"
+                        }))}
+                }
+              console.log("Its not what a person says its who is saying that")  
+            }
+            console.log("Hum pe toh hai hi nooo!!")
+            
+    
+            //Phase 3 starts 
+            //T - 1 frtonend sends message , stroke events tell backend if drawing 
+            
+            
+        }
+}
+
 function timer(room){
     room.time = 10
     room.timer = setInterval(() => {
@@ -58,9 +159,10 @@ function disconnection(playerId , room , roomId ){
             // }
             if(!player){
                 return;
-            }        
+            }    
+            if(player.socket === socket){  
             player.socket = null
-    
+        }
             const recalculatingConnectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
@@ -138,7 +240,7 @@ function handleStrokes(room , playerId , drawerId , message){
 }
 
 
-function checkGuess(data , room, playerId ,drawerId ){
+function checkGuess(data , room, playerId ,drawerId  ,mesage){
     const message = JSON.parse(data)
 
     if(message.type === GUESS_EVENTS.GUESS){
@@ -196,4 +298,28 @@ function checkGuess(data , room, playerId ,drawerId ){
              
             }
 }
-export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes}
+
+function checkWord(room , playerId,drawer , message){
+    // get the id of the word 
+                // check it with prev one 
+                //assign it to the room
+                if(room.state !== ROOM_STATES.choosing_words){
+                    console.log("Room's not in the choosing state man")
+                    return;
+                }
+                if(playerId !== drawer.playerId){
+                    console.log("Only drawer can select the word")
+                    return; 
+                }
+                const theWord =  room.candidateArray.find(
+                    (candidate) => message.wordId === candidate.wordId
+                )
+                if(!theWord){
+                    console.log("Ayee you fucking bitch , no panga taking with me")
+                    return;
+                }
+                room.word = theWord.word.trim().toLowerCase()
+                room.state = ROOM_STATES.drawing
+                timer(room) // timer should 
+}
+export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRound , checkWord}

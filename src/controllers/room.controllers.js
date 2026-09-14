@@ -14,11 +14,13 @@ function create_room(req,res){
         roomId = generateRoomId()
     } 
     // create playes for that rooom
-    rooms[roomId] = {
-        players : [],
-        state : ROOM_STATES.waiting,
-        strokes : []
-    } 
+        rooms[roomId] = {
+            players : [],
+            state : ROOM_STATES.waiting,
+            strokes : [],
+            totalRounds : 3,
+            currentRounds : 0
+        } 
     //return room id
     return res.status(201).json({
         roomId

@@ -1,6 +1,6 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
-import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS} from "../config/constants.js"
+import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
 import {timer , disconnection ,  handleStrokes , checkGuess , syncStrokes} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
@@ -60,65 +60,9 @@ export function initWebSockets(server){
         socket.on("close" , () => {
             disconnection(playerId,room,roomId)
         })
-        //ROUND START LOGIC
-        const connectedPlayers = room.players.filter(
-            (player) => player.socket && 
-                        player.socket.readyState === WebSocket.OPEN
-        )
-    
-        const playersCount = connectedPlayers.length
-        if(rooms[roomId].state === ROOM_STATES.waiting && playersCount >= 2){
-            //ROUND STARTS
-            room.strokes.length = 0
-            //
-            for(const player of room.players){
-                player.hasGuessed = false
-                player.score = 0
-            }
-        
-            //here create a random word for sending to the players 
-            // Give player 1 drawer rights 
-            rooms[roomId].state = ROOM_STATES.drawing
-            room.drawerId = connectedPlayers[0].playerId
-            const animals = [
-                    "Capybara",
-                    "Axolotl",
-                    "Pangolin",
-                    "Meerkat",
-                    "Wombat",
-                    "Narwhal",
-                    "Lemur",
-                    "Platypus",
-                    "Fennec",
-                    "Quokka"
-                            ];
-            const animalIndex = Math.floor(Math.random() * 10);
-    
-            // only he sees the word
-            const word = animals[animalIndex].trim().toLowerCase()
-            room.word = word
-            drawer.socket.send(JSON.stringify({
-                word 
-            }))
-            
-            //i think we hhave to take this block out of the if condition
-            for(const player of room.players){
-                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        if(player.playerId !== playerId){
-                            player.socket.send(JSON.stringify({
-                            message : "Game has fucking started"
-                        }))}
-                }
-              console.log("Its not what a person says its who is saying that")  
-            }
-            console.log("Hum pe toh hai hi nooo!!")
-            timer(room)
-    
-            //Phase 3 starts 
-            //T - 1 frtonend sends message , stroke events tell backend if drawing 
-            
-            
-        }
+
+        startRound(room ,playerId)
+
         socket.on("message", (data) =>{
             const message =  JSON.parse(data)
             if(!message){
@@ -127,12 +71,15 @@ export function initWebSockets(server){
             
             if(message.type===STROKE_EVENTS.POINT){
                 syncStrokes(room , player)
-                handleStrokes(room , playerId  ,room.drawerId , message)
+                handleStrokes(room , playerId  ,room.drawer.playerId , message)
             //for checking if the word sent by the player matches
             }
-            if(message.type === GUESS_EVENTS.GUESS) 
-                checkGuess(data, room , playerId , room.drawerId)
-        
+            if(message.type === GUESS_EVENTS.GUESS) {
+                checkGuess(data, room , playerId , room.drawer.playerId , message)
+            }
+            if(message.type === CHOOSE_WORD.WORD){
+                checkWord(room,playerId ,room.drawer ,message)
+            }
             })
     
         
@@ -147,3 +94,18 @@ export function initWebSockets(server){
  }
 
  
+
+ //We want multiple rounds === One game and total score in the end 
+
+ //1 Remove the player.scroe reset after every round
+ //2 set and number of rounds after which game ends and total score has been provided
+ //3 set a condition that after certain number of rounds game ends 
+ //4 After game ended broadcast the total of each player to all 
+
+
+ //implementing 
+ //1) how do i link total numberof rounds with the room 
+ //i think by room.totalRounds = 3
+ //room.currentRound = 1 then increment this as things come 
+
+ //2) trigger the start of next round 
