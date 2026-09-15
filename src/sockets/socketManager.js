@@ -61,7 +61,7 @@ export function initWebSockets(server){
             disconnection(playerId,room,roomId)
         })
 
-        startRound(room ,playerId)
+        startRound(room ,player)
 
         socket.on("message", (data) =>{
             const message =  JSON.parse(data)

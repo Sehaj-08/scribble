@@ -1,10 +1,12 @@
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
 import { WebSocketServer , WebSocket } from "ws";
 
-function startRound(room , playerId){
+let alreadyMadeDrawers = []
+function startRound(room ,player){
     //ROUND START LOGIC
     if(room.currentRounds > room.totalRounds){
         console.log("Game gas ended")
+        alreadyMadeDrawers.length = 0
         return;
     }
         const connectedPlayers = room.players.filter(
@@ -17,16 +19,37 @@ function startRound(room , playerId){
             //ROUND STARTS
             room.strokes.length = 0
             room.currentRounds += 1
+            
             //
             for(const player of room.players){
                 player.hasGuessed = false
+                player.lastStrokeId = 0  
                 
             }
-        
+            //these 2 if statements make sure each round a different players becomes a drawer
+            //Below is P5T1T8 -- phase 5 , task 1 , track 1 
+            if(room.currentRounds>1){
+                alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
+                
+                // const remainingDrawers = connectedPlayers
+                // .concat(alreadyMadeDrawers)
+                // .filter(item => !connectedPlayers.includes(item) || !alreadyMadeDrawers.includes(item))
+                
+                const remainingDrawers = connectedPlayers.filter(
+                    (player) => !alreadyMadeDrawers.includes(player)
+                )
+
+                let drawIndex = Math.floor(Math.random() * remainingDrawers.length)
+                room.drawer = remainingDrawers[drawIndex]
+            }
+            if(room.currentRounds === 1){
+            let drawerIndex = Math.floor(Math.random() * playersCount)
+            room.drawer = connectedPlayers[drawerIndex]
+            }
             //here create a random word for sending to the players 
             // Give player 1 drawer rights 
             // rooms[roomId].state = ROOM_STATES.drawing
-            room.drawer = connectedPlayers[0]
+            
             room.state = ROOM_STATES.choosing_words // only after word has been choose room's state can be drawing 
             const animals = [
                     "Capybara",
@@ -80,15 +103,7 @@ function startRound(room , playerId){
             
           
             //i think we hhave to take this block out of the if condition
-            for(const player of room.players){
-                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        if(player.playerId !== playerId){
-                            player.socket.send(JSON.stringify({
-                            message : "Game has fucking started"
-                        }))}
-                }
-              console.log("Its not what a person says its who is saying that")  
-            }
+        
             console.log("Hum pe toh hai hi nooo!!")
             
     
@@ -99,7 +114,7 @@ function startRound(room , playerId){
         }
 }
 
-function timer(room){
+function timer(room,playerId){
     room.time = 10
     room.timer = setInterval(() => {
         for(const player of room.players){
@@ -121,6 +136,10 @@ function timer(room){
                         word : room.word
                     }))
                 }
+            }
+            if(room.currentRounds < room.totalRounds){
+                room.state = ROOM_STATES.waiting
+                startRound(room , playerId)
             }
         }
 
@@ -234,6 +253,7 @@ function handleStrokes(room , playerId , drawerId , message){
                     player.socket.readyState === WebSocket.OPEN &&
                      player.playerId !== drawerId){
                         player.socket.send(JSON.stringify(message))
+                        player.lastStrokeId = message.strokeId
                     
                 }
             }
@@ -320,6 +340,44 @@ function checkWord(room , playerId,drawer , message){
                 }
                 room.word = theWord.word.trim().toLowerCase()
                 room.state = ROOM_STATES.drawing
-                timer(room) // timer should 
+                timer(room, playerId) // timer should 
+                //broadcasting msg too all about the start of the round
+
+                for(const player of room.players){
+                    if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                        if(player.playerId !== playerId){
+                            player.socket.send(JSON.stringify({
+                            message : "Game has fucking started"
+                        }))}
+                }
+              console.log("Its not what a person says its who is saying that")  
+            }
+                
 }
 export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRound , checkWord}
+
+
+//what we want to implement 
+//select differnt drawers for each round and no one player can become drawer more than 1 time 
+// got a drawer or this round 
+// for next round got a random index generated 
+// get the player at that index for being the next drawer 
+// PROB --  but what if the same player became drawer ins the next round too 
+// for this 
+// use filter where player.playerId !== drawer.playerId (this is prev drawer)
+// this will give an array of people who havent became drawers yet 
+// now select from that array the next drawer and repeat the random index code 
+
+//PROB -- what if a playre joined in between the round
+// he will be in connectedplayers array but not in our selecting drawers array ??
+// due to this eh willl not get the change of becoming drawer any time ???
+
+//ok THE FINAL SOLUTION 
+// connectedPlayers == will have connected players 
+// the moment round starts we assign drawers 
+// for the next round we will stroe this current drawer in an array alreadtMadeDrawers 
+// next round starts 
+// we will check the connectedPlayrs again get all the connected players 
+// compare the connectedPlayers with alreadyMadeDrawers 
+// eliminate playrs who hare in alreadyMadeDrawers 
+// select next drawer from remaining once
