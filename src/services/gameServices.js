@@ -260,8 +260,7 @@ function handleStrokes(room , playerId , drawerId , message){
 }
 
 
-function checkGuess(data , room, playerId ,drawerId  ,mesage){
-    const message = JSON.parse(data)
+function checkGuess(data , room, playerId ,drawerId  ,message){
 
     if(message.type === GUESS_EVENTS.GUESS){
                 //first check if the room even exists or not 
@@ -295,12 +294,31 @@ function checkGuess(data , room, playerId ,drawerId  ,mesage){
                                 type : "correct_guess",
                                 player : playerId
                             }))
+                           
                         }
                     }
+
+                    //check whether everyone has guessed correctly or not
+                    let allguesses = true
+                    for(const player of room.players){
+                        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                            if(player.playerId !== drawerId){
+                                if(!player.hasGuessed){
+                                    allguesses = false
+                                    break
+                                }
+                            }
+                        }
+                    } 
+
     
                     //Scoring rules 
                     let points = room.time
                     player.score += points
+                    if(allguesses){
+                        room.state = ROOM_STATES.round_ended
+                        clearInterval(room.timer)
+                    }
     
                     console.log("Correct guess")
                 }else{
@@ -381,3 +399,5 @@ export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRo
 // compare the connectedPlayers with alreadyMadeDrawers 
 // eliminate playrs who hare in alreadyMadeDrawers 
 // select next drawer from remaining once
+
+//TASK - end round early if all have guessed correcctly     
