@@ -9,14 +9,14 @@ function startRound(room){
         alreadyMadeDrawers.length = 0
         return;
     }
-       room.state = ROOM_STATES.waiting
+           
         const connectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
         )
     
         const playersCount = connectedPlayers.length
-        if(room.state === ROOM_STATES.waiting && playersCount >= 2){
+        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
             //ROUND STARTS
             room.strokes.length = 0
             room.currentRounds += 1
@@ -130,6 +130,7 @@ function timer(room,playerId){
         room.time--
         if(room.time<=0){
             clearInterval(room.timer)
+            room.timer = null
             room.state = ROOM_STATES.round_ended
             for(const player of room.players){
                 if(player.socket && player.socket.readyState === WebSocket.OPEN){
@@ -139,7 +140,22 @@ function timer(room,playerId){
                     }))
                 }
             }
-                startRound(room)
+            if(room.currentRounds < room.totalRounds){
+                const playersLeft = room.players.filter(
+                    (player) => player.socket &&
+                            player.socket.readyState === WebSocket.OPEN
+                )
+                if(playersLeft.length <=1){
+                    room.state = ROOM_STATES.waiting
+                }else{
+                    room.state = ROOM_STATES.starting_new_round
+                    startRound(room)
+                }
+            }else{
+                console.log("Game has fuckign ended you fuckign little bitch!!!")
+        
+            }
+                
             
         }
 
@@ -367,9 +383,11 @@ function checkWord(room , playerId,drawer , message){
                     console.log("Only drawer can select the word")
                     return; 
                 }
+                console.log("Below we will talk about theWord")
                 const theWord =  room.candidateArray.find(
                     (candidate) => message.wordId === candidate.wordId
                 )
+                console.log(theWord)
                 if(!theWord){
                     console.log("Ayee you fucking bitch , no panga taking with me")
                     return;

@@ -1,7 +1,7 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
-import {timer , disconnection ,  startRound,handleStrokes , checkGuess , syncStrokes} from "../services/gameServices.js" 
+import {timer , disconnection ,  startRound,handleStrokes , checkGuess , syncStrokes , checkWord} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -117,3 +117,5 @@ export function initWebSockets(server){
  //room.currentRound = 1 then increment this as things come 
 
  //2) trigger the start of next round 
+
+ 

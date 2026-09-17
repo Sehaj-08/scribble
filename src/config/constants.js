@@ -3,7 +3,8 @@ const ROOM_STATES = {
     waiting : "WAITING",
     drawing : "DRAWING",
     round_ended : "ROUND_ENDED",
-    choosing_words : "CHOOSING_WORD"    
+    choosing_words : "CHOOSING_WORD"    ,
+    starting_new_round : "STARTING_NEW_ROUND"
 }
 
 //stroke events
