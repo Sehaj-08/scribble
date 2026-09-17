@@ -1,7 +1,7 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
-import {timer , disconnection ,  handleStrokes , checkGuess , syncStrokes} from "../services/gameServices.js" 
+import {timer , disconnection ,  startRound,handleStrokes , checkGuess , syncStrokes} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -58,10 +58,18 @@ export function initWebSockets(server){
         
         //Disconnection logic 
         socket.on("close" , () => {
-            disconnection(playerId,room,roomId)
+            // if(playerId === room.drawer.playerId){
+            //     drawerDisconnected()
+            // }
+            disconnection(playerId,room,roomId,socket)
         })
-
-        startRound(room ,player)
+        //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
+        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+            if(room.state === ROOM_STATES.waiting)
+            startRound(room ,player)
+        }else{
+            console.log("New player joined the same game")
+        }
 
         socket.on("message", (data) =>{
             const message =  JSON.parse(data)

@@ -1,14 +1,15 @@
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
 import { WebSocketServer , WebSocket } from "ws";
 
-let alreadyMadeDrawers = []
-function startRound(room ,player){
+
+function startRound(room){
     //ROUND START LOGIC
-    if(room.currentRounds > room.totalRounds){
+    if(room.currentRounds >= room.totalRounds){
         console.log("Game gas ended")
         alreadyMadeDrawers.length = 0
         return;
     }
+       room.state = ROOM_STATES.waiting
         const connectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
@@ -29,14 +30,14 @@ function startRound(room ,player){
             //these 2 if statements make sure each round a different players becomes a drawer
             //Below is P5T1T8 -- phase 5 , task 1 , track 1 
             if(room.currentRounds>1){
-                alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
+                room.alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
                 
                 // const remainingDrawers = connectedPlayers
                 // .concat(alreadyMadeDrawers)
                 // .filter(item => !connectedPlayers.includes(item) || !alreadyMadeDrawers.includes(item))
                 
                 const remainingDrawers = connectedPlayers.filter(
-                    (player) => !alreadyMadeDrawers.includes(player)
+                    (player) => !room.alreadyMadeDrawers.includes(player)
                 )
 
                 let drawIndex = Math.floor(Math.random() * remainingDrawers.length)
@@ -63,13 +64,13 @@ function startRound(room ,player){
                     "Fennec",
                     "Quokka"
                             ];
-            const candidateWordIndex1 = Math.floor(Math.random() * 10);
-            const candidateWordIndex2 = Math.floor(Math.random() * 10);
+            let candidateWordIndex1 = Math.floor(Math.random() * 10);
+            let candidateWordIndex2 = Math.floor(Math.random() * 10);
              //add a check for if the candidate words are the fucking same
             while(candidateWordIndex2 === candidateWordIndex1){
                 candidateWordIndex2 = Math.floor(Math.random() * 10)
             }
-            const candidateWordIndex3 = Math.floor(Math.random() * 10);
+            let candidateWordIndex3 = Math.floor(Math.random() * 10);
             while(candidateWordIndex3 === candidateWordIndex2){
                 candidateWordIndex3 = Math.floor(Math.random() * 10)
             }
@@ -97,6 +98,7 @@ function startRound(room ,player){
             if(room.drawer.socket && room.drawer.socket.readyState === WebSocket.OPEN){
             room.drawer.socket.send(JSON.stringify(wordChoiceMessage))
             }
+            room.state = ROOM_STATES.choosing_words
 
     
             
@@ -137,10 +139,8 @@ function timer(room,playerId){
                     }))
                 }
             }
-            if(room.currentRounds < room.totalRounds){
-                room.state = ROOM_STATES.waiting
-                startRound(room , playerId)
-            }
+                startRound(room)
+            
         }
 
     }, 1000);
@@ -168,7 +168,7 @@ function timer(room,playerId){
 //         rooms[roomId].state = ROOM_STATES.round_ended
 // }
 
-function disconnection(playerId , room , roomId ){
+function disconnection(playerId , room , roomId,socket){
     console.log(`Player with id ${playerId} has disconnected from room ${roomId}`)
             const player = room.players.find(
                 (player) => player.playerId === playerId
@@ -178,28 +178,46 @@ function disconnection(playerId , room , roomId ){
             // }
             if(!player){
                 return;
-            }    
+            }   
+            
             if(player.socket === socket){  
             player.socket = null
         }
+        if(playerId === room.drawer.playerId){
+                room.state = ROOM_STATES.round_ended
+                clearInterval(room.timer)
+                for(const players of room.players){
+                    if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                        players.socket.send(JSON.stringify("Drawer humara kayar tha leave krr gya bitch!!!"))
+                    }
+                } 
+            } 
             const recalculatingConnectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
         )
             if(recalculatingConnectedPlayers.length <= 1){
-                clearInterval(room.timer)
-                room.timer = null
-                console.log(room.timer)
-                room.state = ROOM_STATES.round_ended;
+                // clearInterval(room.timer)
+                // room.timer = null
+                // console.log(room.timer)
+                room.state = ROOM_STATES.waiting;
                 for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
                         player.socket.send(JSON.stringify({
-                            message : "Round ended fuck you"
+                            message : "Waiting for players to fucking join"
                         }))
                     }   
                 }
             }
+            
 }
+
+// function drawerDisconnected(){
+//     console.log("drawer is gone cry bitches cry ")
+//     room.state = ROOM_STATES.round_ended
+//     clearInterval(room.timer)
+    
+// }
 function syncStrokes(room, player){
     if(room.strokes.length === 0){
         return;
@@ -372,7 +390,7 @@ function checkWord(room , playerId,drawer , message){
             }
                 
 }
-export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRound , checkWord}
+export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRound , checkWord }
 
 
 //what we want to implement 

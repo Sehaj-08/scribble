@@ -19,7 +19,8 @@ function create_room(req,res){
             state : ROOM_STATES.waiting,
             strokes : [],
             totalRounds : 3,
-            currentRounds : 0
+            currentRounds : 0,
+            alreadyMadeDrawers : [] 
         } 
     //return room id
     return res.status(201).json({
