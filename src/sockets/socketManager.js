@@ -78,10 +78,11 @@ export function initWebSockets(server){
             }
             
             if(message.type===STROKE_EVENTS.POINT){
+                if(room.state === ROOM_STATES.drawing){ //check if this condition is even needed or fucking not !!!!
                 syncStrokes(room , player)
                 handleStrokes(room , playerId  ,room.drawer.playerId , message)
             //for checking if the word sent by the player matches
-            }
+                 } }
             if(message.type === GUESS_EVENTS.GUESS) {
                 checkGuess(data, room , playerId , room.drawer.playerId , message)
             }

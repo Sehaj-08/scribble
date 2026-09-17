@@ -218,12 +218,33 @@ function disconnection(playerId , room , roomId,socket){
         if(playerId === room.drawer.playerId){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
+                
                 for(const players of room.players){
                     if(players.socket && players.socket.readyState === WebSocket.OPEN){
                         players.socket.send(JSON.stringify("Drawer humara kayar tha leave krr gya bitch!!!"))
                     }
-                } 
+                }//if drawer lefts mid round ONLY then check this 
+                //for normal players leaving this is not needed thats why we put this code in the if drawer left block 
+                //Logic responsible for starting next round or ending the game
+                    if(room.currentRounds <= room.totalRounds){
+                        const playersLeft = room.players.filter(
+                            (player) => player.socket &&
+                                    player.socket.readyState === WebSocket.OPEN
+                        )
+                        if(playersLeft.length <=1){
+                            console.log("We have less players so wait")
+                            room.state = ROOM_STATES.waiting
+                        }else{
+                            console.log("Rounds remain and players enough so start next round")
+                            room.state = ROOM_STATES.starting_new_round
+                            startRound(room)
+                        }
+                    }else{
+                        console.log("Game has fuckign ended you fuckign little bitch!!!")
+                
+                    } 
             } 
+            
             const recalculatingConnectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
@@ -251,6 +272,10 @@ function disconnection(playerId , room , roomId,socket){
     
 // }
 function syncStrokes(room, player){
+    if(room.state !== ROOM_STATES.drawing){
+        console.log("Round not started yet so no strokes")
+        return;
+    }
     if(room.strokes.length === 0){
         return;
     }
@@ -272,6 +297,10 @@ function syncStrokes(room, player){
 
 
 function handleStrokes(room , playerId , drawerId , message){
+    if(room.state !== ROOM_STATES.drawing){
+        console.log("Round not started yet so no strokes")
+        return;
+    }
     //Authorizing the drawer    
                 if(playerId !== drawerId){
                     console.log("Only drawer has the permission")
