@@ -6,10 +6,10 @@ function startRound(room){
     //ROUND START LOGIC
     if(room.currentRounds >= room.totalRounds){
         console.log("Game gas ended")
-        alreadyMadeDrawers.length = 0
+        room.alreadyMadeDrawers.length = 0
         return;
     }
-           
+        console.log("Calculating connected players")
         const connectedPlayers = room.players.filter(
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
@@ -18,6 +18,7 @@ function startRound(room){
         const playersCount = connectedPlayers.length
         if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
             //ROUND STARTS
+            console.log("Round started")
             room.strokes.length = 0
             room.currentRounds += 1
             
@@ -30,27 +31,37 @@ function startRound(room){
             //these 2 if statements make sure each round a different players becomes a drawer
             //Below is P5T1T8 -- phase 5 , task 1 , track 1 
             if(room.currentRounds>1){
+                console.log("Rounds greated than 1")
                 room.alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
                 
                 // const remainingDrawers = connectedPlayers
                 // .concat(alreadyMadeDrawers)
                 // .filter(item => !connectedPlayers.includes(item) || !alreadyMadeDrawers.includes(item))
-                
+                //Line below solves the rotation problem (Task10 notion)
+                if(room.alreadyMadeDrawers.length === playersCount){
+                    console.log("alredy made drawers was reset")
+                    room.alreadyMadeDrawers.length = 0
+                }
                 const remainingDrawers = connectedPlayers.filter(
                     (player) => !room.alreadyMadeDrawers.includes(player)
                 )
+                // if(remainingDrawers.length === 0){
+
+                // }
 
                 let drawIndex = Math.floor(Math.random() * remainingDrawers.length)
                 room.drawer = remainingDrawers[drawIndex]
             }
             if(room.currentRounds === 1){
+                console.log("First round started")
             let drawerIndex = Math.floor(Math.random() * playersCount)
             room.drawer = connectedPlayers[drawerIndex]
             }
             //here create a random word for sending to the players 
             // Give player 1 drawer rights 
             // rooms[roomId].state = ROOM_STATES.drawing
-            
+            console.log(room.drawer)
+            console.log(room.currentRounds)
             room.state = ROOM_STATES.choosing_words // only after word has been choose room's state can be drawing 
             const animals = [
                     "Capybara",
@@ -90,11 +101,13 @@ function startRound(room){
                 }
             ]
            //sending these candidate words to the frontend
+           console.log("Sending choose word message")
             const wordChoiceMessage = {
                 type : "word_choice",
                 words : room.candidateArray
             }
             // only drawer sees the word
+            console.log("Sending drawer candidate words")
             if(room.drawer.socket && room.drawer.socket.readyState === WebSocket.OPEN){
             room.drawer.socket.send(JSON.stringify(wordChoiceMessage))
             }
@@ -140,14 +153,16 @@ function timer(room,playerId){
                     }))
                 }
             }
-            if(room.currentRounds < room.totalRounds){
+            if(room.currentRounds <= room.totalRounds){
                 const playersLeft = room.players.filter(
                     (player) => player.socket &&
                             player.socket.readyState === WebSocket.OPEN
                 )
                 if(playersLeft.length <=1){
+                    console.log("We have less players so wait")
                     room.state = ROOM_STATES.waiting
                 }else{
+                    console.log("Rounds remain and players enough so start next round")
                     room.state = ROOM_STATES.starting_new_round
                     startRound(room)
                 }

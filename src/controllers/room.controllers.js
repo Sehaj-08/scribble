@@ -18,7 +18,7 @@ function create_room(req,res){
             players : [],
             state : ROOM_STATES.waiting,
             strokes : [],
-            totalRounds : 3,
+            totalRounds : 5 ,
             currentRounds : 0,
             alreadyMadeDrawers : [] 
         } 
