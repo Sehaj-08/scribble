@@ -14,7 +14,7 @@ const STROKE_EVENTS = {
 }
 
 
-const GUESS_EVENTS =  {    //checkign the type of incoming req and matching with this
+const GUESS_EVENTS =  {    //checking the type of incoming req and matching with this
     GUESS : "guess"
 }
 

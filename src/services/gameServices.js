@@ -130,7 +130,7 @@ function startRound(room){
 }
 
 function timer(room,playerId){
-    room.time = 10
+    room.time = 60
     room.timer = setInterval(() => {
         for(const player of room.players){
             if(player.socket && player.socket.readyState === WebSocket.OPEN){
@@ -153,6 +153,7 @@ function timer(room,playerId){
                     }))
                 }
             }
+            //Logic responsible for starting next round or ending the game
             if(room.currentRounds <= room.totalRounds){
                 const playersLeft = room.players.filter(
                     (player) => player.socket &&
@@ -316,10 +317,10 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                 if(room.state === ROOM_STATES.round_ended){
                         console.log("Round has already ended")
                         return
-                    }
+                    } 
                 // 
                 if(!message.text || drawerId === playerId){
-                    console.log("No message received")
+                    console.log("No message received or drawer guessing the word in not allowed")
                     return
                 }
                 const guess = message.text.trim().toLowerCase();
@@ -367,6 +368,26 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                     if(allguesses){
                         room.state = ROOM_STATES.round_ended
                         clearInterval(room.timer)
+                        
+                        //Logic responsible for starting next round or ending the game
+
+                        if(room.currentRounds <= room.totalRounds){
+                                const playersLeft = room.players.filter(
+                                    (player) => player.socket &&
+                                            player.socket.readyState === WebSocket.OPEN
+                                )
+                                if(playersLeft.length <=1){
+                                    console.log("We have less players so wait")
+                                    room.state = ROOM_STATES.waiting
+                                }else{
+                                    console.log("Rounds remain and players enough so start next round")
+                                    room.state = ROOM_STATES.starting_new_round
+                                    startRound(room)
+                                }
+                            }else{
+                                console.log("Game has fuckign ended you fuckign little bitch!!!")
+                        
+                            }
                     }
     
                     console.log("Correct guess")
