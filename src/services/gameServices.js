@@ -271,30 +271,79 @@ function disconnection(playerId , room , roomId,socket){
 //     clearInterval(room.timer)
     
 // }
-function syncStrokes(room, player){
-    if(room.state !== ROOM_STATES.drawing){
-        console.log("Round not started yet so no strokes")
+// function syncStrokes(room, player){
+//     if(room.state !== ROOM_STATES.drawing){
+//         console.log("Round not started yet so no strokes")
+//         return;
+//     }
+//     if(room.strokes.length === 0){
+//         console.log("No stroke made by drawer yet")
+//         return; 
+//     }
+//     //for now i am assuming id of first stroke will alwas be 1
+//     console.log("syncstroke started")
+//     // find the strokeId he has currently
+//     // let currentPlayerStroke = player.lastStrokeId   
+//     // throught the id find the index 
+//     const currentStrokeIndex = room.strokes.findIndex(
+//         (stroke) => stroke.strokeId === player.lastStrokeId
+//     )
+//     // //all elements before that index are what the late commer needs
+    
+//     let count = room.strokes.length - 1 
+//     for(let i = currentStrokeIndex ; i<=count; i++){
+//         if(player.socket && player.socket.readyState === WebSocket.OPEN){
+//             player.socket.send(JSON.stringify(room.strokes[i]))
+//         }
+//     }
+//     // const lastStroke = room.strokes[count].strokeId
+//     // // const lastStroke = room.strokes.length
+//     // console.log(lastStroke)
+//     // if(lastStroke !== player.lastStrokeId){
+//     //     console.log("calculating missing strokes")
+//     //     const missingStrokes = room.strokes.filter(
+//     //     (stroke) => stroke.strokeId > player.lastStrokeId  //this condition is wrong 
+//     // )
+//     // console.log(missingStrokes)
+//     // for(const stroke of missingStrokes){
+//     //     if(player.socket && player.socket.readyState === WebSocket.OPEN){
+//     //         player.socket.send(JSON.stringify(stroke))
+//     //         player.lastStrokeId = stroke.strokeId  
+//     //     }
+//     // }
+//     // }
+    
+// }
+
+function syncStrokes(room, player) {
+
+    if (room.state !== ROOM_STATES.drawing) {
+        console.log("Round not started yet so no strokes");
         return;
     }
-    if(room.strokes.length === 0){
+
+    if (room.strokes.length === 0) {
+        console.log("No stroke made by drawer yet");
         return;
     }
-    let count = room.strokes.length - 1
-    const lastStroke = room.strokes[count].strokeId
-    if(lastStroke !== player.lastStrokeId){
-        const missingStrokes = room.strokes.filter(
-        (stroke) => stroke.strokeId > player.lastStrokeId
-    )
-    for(const stroke of missingStrokes){
-        if(player.socket && player.socket.readyState === WebSocket.OPEN){
-            player.socket.send(JSON.stringify(stroke))
-            player.lastStrokeId = stroke.strokeId  
+
+    console.log("syncstroke started");
+
+    const missingStrokes = room.strokes.filter(
+        stroke => stroke.strokeId > player.lastStrokeId
+    );
+
+    for (const stroke of missingStrokes) {
+
+        if (
+            player.socket &&
+            player.socket.readyState === WebSocket.OPEN
+        ) {
+            player.socket.send(JSON.stringify(stroke));
+            player.lastStrokeId = stroke.strokeId;
         }
     }
-    }
-    
 }
-
 
 function handleStrokes(room , playerId , drawerId , message){
     if(room.state !== ROOM_STATES.drawing){
@@ -337,7 +386,6 @@ function handleStrokes(room , playerId , drawerId , message){
                 }
             }
 }
-
 
 function checkGuess(data , room, playerId ,drawerId  ,message){
 
@@ -440,10 +488,12 @@ function checkWord(room , playerId,drawer , message){
     // get the id of the word 
                 // check it with prev one 
                 //assign it to the room
+                console.log("Checking Room state")
                 if(room.state !== ROOM_STATES.choosing_words){
                     console.log("Room's not in the choosing state man")
                     return;
                 }
+                console.log("Checking if player is only drawer")
                 if(playerId !== drawer.playerId){
                     console.log("Only drawer can select the word")
                     return; 
@@ -473,7 +523,7 @@ function checkWord(room , playerId,drawer , message){
             }
                 
 }
-export {timer, disconnection , handleStrokes ,checkGuess , syncStrokes , startRound , checkWord }
+export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord }
 
 
 //what we want to implement 

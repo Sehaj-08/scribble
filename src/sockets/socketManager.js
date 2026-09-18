@@ -1,7 +1,7 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
-import {timer , disconnection ,  startRound,handleStrokes , checkGuess , syncStrokes , checkWord} from "../services/gameServices.js" 
+import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -57,6 +57,7 @@ export function initWebSockets(server){
         //2+ Players then start the game
         
         //Disconnection logic 
+        syncStrokes(room , player)
         socket.on("close" , () => {
             // if(playerId === room.drawer.playerId){
             //     drawerDisconnected()
@@ -79,14 +80,16 @@ export function initWebSockets(server){
             
             if(message.type===STROKE_EVENTS.POINT){
                 if(room.state === ROOM_STATES.drawing){ //check if this condition is even needed or fucking not !!!!
-                syncStrokes(room , player)
-                handleStrokes(room , playerId  ,room.drawer.playerId , message)
+                console.log("Stroke message arrived")
+                                  
+                    handleStrokes(room , playerId  ,room.drawer.playerId , message)
             //for checking if the word sent by the player matches
                  } }
             if(message.type === GUESS_EVENTS.GUESS) {
                 checkGuess(data, room , playerId , room.drawer.playerId , message)
             }
             if(message.type === CHOOSE_WORD.WORD){
+                console.log("check Word function has been started or we can say initiated")
                 checkWord(room,playerId ,room.drawer ,message)
             }
             })
