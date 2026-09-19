@@ -22,9 +22,22 @@ function create_room(req,res){
             currentRounds : 0,
             alreadyMadeDrawers : [] 
         } 
+
+        //here we can make first player join
+        const playerId = Math.random().toString(36).substring(2, 10);
+    
+        // storing player isn the player array
+        rooms[roomId].players.push({
+            playerId,
+            socket: null,
+            hasGuessed: false,
+            lastStrokeId: 0,
+            score: 0
+        })
     //return room id
     return res.status(201).json({
-        roomId
+        roomId,
+        playerId,
     })
 }
 

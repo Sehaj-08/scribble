@@ -262,6 +262,7 @@ function disconnection(playerId , room , roomId,socket){
                     }   
                 }
             }
+            //here i think we should the condition for clearing the state when zero players are left 
             
 }
 
