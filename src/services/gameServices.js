@@ -1,5 +1,6 @@
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
 import { WebSocketServer , WebSocket } from "ws";
+import { rooms } from "../store/roomStore.js";
 
 
 function startRound(room){
@@ -212,9 +213,10 @@ function disconnection(playerId , room , roomId,socket){
                 return;
             }   
             
-            if(player.socket === socket){  
-            player.socket = null
+            if(player.socket !== socket){  
+            return;
         }
+        player.socket = null
         if(playerId === room.drawer.playerId){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
@@ -226,15 +228,16 @@ function disconnection(playerId , room , roomId,socket){
                 }//if drawer lefts mid round ONLY then check this 
                 //for normal players leaving this is not needed thats why we put this code in the if drawer left block 
                 //Logic responsible for starting next round or ending the game
-                    if(room.currentRounds <= room.totalRounds){
+                    if(room.currentRounds < room.totalRounds){
                         const playersLeft = room.players.filter(
                             (player) => player.socket &&
                                     player.socket.readyState === WebSocket.OPEN
                         )
-                        if(playersLeft.length <=1){
+                        if(playersLeft.length === 1){
                             console.log("We have less players so wait")
                             room.state = ROOM_STATES.waiting
-                        }else{
+                        }
+                        if(playersLeft.length > 1){
                             console.log("Rounds remain and players enough so start next round")
                             room.state = ROOM_STATES.starting_new_round
                             startRound(room)
@@ -249,7 +252,16 @@ function disconnection(playerId , room , roomId,socket){
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
         )
-            if(recalculatingConnectedPlayers.length <= 1){
+        if(recalculatingConnectedPlayers.length === 0){
+                console.log("Now we have to delete the room man")
+                if (room.timer) {
+                    clearInterval(room.timer)
+                    room.timer = null 
+                }
+                delete rooms[roomId]
+                return ;     
+            }
+            if(recalculatingConnectedPlayers.length === 1){
                 // clearInterval(room.timer)
                 // room.timer = null
                 // console.log(room.timer)
