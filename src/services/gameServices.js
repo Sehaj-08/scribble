@@ -8,6 +8,14 @@ function startRound(room){
     if(room.currentRounds >= room.totalRounds){
         console.log("Game gas ended")
         room.alreadyMadeDrawers.length = 0
+        for(const players of room.players){
+            if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                players.socket.send(JSON.stringify({
+                    type : "Players score",
+                    score : players.score
+            }))
+            }
+        }
         return;
     }
         console.log("Calculating connected players")
@@ -17,6 +25,7 @@ function startRound(room){
         )
     
         const playersCount = connectedPlayers.length
+               // 
         if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
             //ROUND STARTS
             console.log("Round started")
@@ -33,25 +42,50 @@ function startRound(room){
             //Below is P5T1T8 -- phase 5 , task 1 , track 1 
             if(room.currentRounds>1){
                 console.log("Rounds greated than 1")
-                room.alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
+                // room.alreadyMadeDrawers.push(room.drawer)  //pushing drawer of previous round
                 
-                // const remainingDrawers = connectedPlayers
-                // .concat(alreadyMadeDrawers)
-                // .filter(item => !connectedPlayers.includes(item) || !alreadyMadeDrawers.includes(item))
-                //Line below solves the rotation problem (Task10 notion)
-                if(room.alreadyMadeDrawers.length === playersCount){
-                    console.log("alredy made drawers was reset")
-                    room.alreadyMadeDrawers.length = 0
-                }
-                const remainingDrawers = connectedPlayers.filter(
-                    (player) => !room.alreadyMadeDrawers.includes(player)
-                )
-                // if(remainingDrawers.length === 0){
-
+                // // const remainingDrawers = connectedPlayers
+                // // .concat(alreadyMadeDrawers)
+                // // .filter(item => !connectedPlayers.includes(item) || !alreadyMadeDrawers.includes(item))
+                // //Line below solves the rotation problem (Task10 notion)
+                // if(room.alreadyMadeDrawers.length === playersCount){
+                //     console.log("alredy made drawers was reset")
+                //     room.alreadyMadeDrawers.length = 0
                 // }
+                // const remainingDrawers = connectedPlayers.filter(
+                //     (player) => !room.alreadyMadeDrawers.includes(player)
+                // )
+                // // if(remainingDrawers.length === 0){
 
-                let drawIndex = Math.floor(Math.random() * remainingDrawers.length)
-                room.drawer = remainingDrawers[drawIndex]
+                // // }
+
+                // let drawIndex = Math.floor(Math.random() * remainingDrawers.length)
+                // room.drawer = remainingDrawers[drawIndex]
+                const previousDrawer = room.drawer;
+
+room.alreadyMadeDrawers.push(previousDrawer);
+
+let remainingDrawers = connectedPlayers.filter(
+    player => !room.alreadyMadeDrawers.includes(player)
+);
+
+if (remainingDrawers.length === 0) {
+
+    console.log("All connected players have been drawers. Resetting drawer history.");
+
+    room.alreadyMadeDrawers.length = 0;
+
+    // Prevent immediate repeat across cycle boundary
+    remainingDrawers = connectedPlayers.filter(
+        player => player.playerId !== previousDrawer.playerId
+    );
+}
+
+const drawIndex = Math.floor(
+    Math.random() * remainingDrawers.length
+);
+
+room.drawer = remainingDrawers[drawIndex];
             }
             if(room.currentRounds === 1){
                 console.log("First round started")
@@ -61,7 +95,7 @@ function startRound(room){
             //here create a random word for sending to the players 
             // Give player 1 drawer rights 
             // rooms[roomId].state = ROOM_STATES.drawing
-            console.log(room.drawer)
+            console.log("Drawers information",room.drawer.playerId)
             console.log(room.currentRounds)
             room.state = ROOM_STATES.choosing_words // only after word has been choose room's state can be drawing 
             const animals = [
@@ -143,6 +177,12 @@ function timer(room,playerId){
         }
         room.time--
         if(room.time<=0){
+            //CRITICAL BUG FIX 03
+            // THis line is added to stop 2 diff callbacks from running the same endround logic 
+            //if the round is already ended by another call back its state owuld be round_ended 
+            // so this line below would stop same round to end one more time 
+            if (room.state !== ROOM_STATES.drawing) return;
+
             clearInterval(room.timer)
             room.timer = null
             room.state = ROOM_STATES.round_ended
@@ -154,23 +194,32 @@ function timer(room,playerId){
                     }))
                 }
             }
-            //Logic responsible for starting next round or ending the game
+            //Logic responsible for starting next round or ending the game (MAKE THIS A SEPETATE FUNCTION)
             if(room.currentRounds <= room.totalRounds){
                 const playersLeft = room.players.filter(
                     (player) => player.socket &&
                             player.socket.readyState === WebSocket.OPEN
                 )
-                if(playersLeft.length <=1){
+                if(playersLeft.length === 1){
                     console.log("We have less players so wait")
                     room.state = ROOM_STATES.waiting
-                }else{
+                }
+                if(playersLeft.length > 1){
                     console.log("Rounds remain and players enough so start next round")
                     room.state = ROOM_STATES.starting_new_round
                     startRound(room)
                 }
             }else{
-                console.log("Game has fuckign ended you fuckign little bitch!!!")
-        
+                console.log("Timer Ended, Game has fuckign ended you fuckign little bitch!!!")
+                //Broadacasting score
+                for(const players of room.players){
+                if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                    players.socket.send(JSON.stringify({
+                        type : "Players score",
+                        score : players.score
+                }))
+            }
+        }
             }
                 
             
@@ -216,8 +265,16 @@ function disconnection(playerId , room , roomId,socket){
             if(player.socket !== socket){  
             return;
         }
-        player.socket = null
-        if(playerId === room.drawer.playerId){
+        player.socket = null 
+        //CRITICLA BUG 04 exists on line 277 
+        //SOlved in line 277
+        //if one player is in room -- room is waiting -- no drawer selected -- no room.drawer exists
+        //of not room.drawer exists them room.drawer.playerId is undefined which will cause server crash 
+        // if(!room.drawer){
+        //     console.log('Les end the round!!')
+        //     return
+        // }  //INSTEAD OF ADDING ABOVE CODE WHICH CALLED RETURN TOO EARLY BLOCKIGN FROM ROOM DELETION WE MODIFIED THE ORIGINAL LINE BELOW 
+        if(room.drawer && playerId === room.drawer.playerId){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
                 
@@ -244,7 +301,15 @@ function disconnection(playerId , room , roomId,socket){
                         }
                     }else{
                         console.log("Game has fuckign ended you fuckign little bitch!!!")
-                
+                        //Broadcasting Score
+                        for(const players of room.players){
+                            if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                                players.socket.send(JSON.stringify({
+                                    type : "Players score",
+                                    score : players.score
+                     }))
+            }
+        }
                     } 
             } 
             
@@ -262,9 +327,11 @@ function disconnection(playerId , room , roomId,socket){
                 return ;     
             }
             if(recalculatingConnectedPlayers.length === 1){
-                // clearInterval(room.timer)
-                // room.timer = null
-                // console.log(room.timer)
+                //CRITICAL BUG 05 SOLVED HERE
+                //When waiting for other players -- waiting for round to start yet -- so timer should not be running in waiting state
+                clearInterval(room.timer)
+                room.timer = null
+                console.log(room.timer)
                 room.state = ROOM_STATES.waiting;
                 for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
@@ -408,6 +475,11 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                         console.log("Round has already ended")
                         return
                     } 
+                    //CRITICAL BUG 06 
+                    //ONLY ALLOW GUESS WORDS AFTER DRAWER HAS SELECTED THE MAIN WORD
+                    if(room.state !== ROOM_STATES.drawing){
+                        console.log("Room's not allowing drawing yet so stop fucking guess you stupid little fagot!!!")
+                    }
                 // 
                 if(!message.text || drawerId === playerId){
                     console.log("No message received or drawer guessing the word in not allowed")
@@ -419,14 +491,16 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                 const player = room.players.find(
                     (player) => player.playerId === playerId
                 )
+                console.log("Before guessing" , player.hasGuessed)
                 if(guess === currentWord){
                     //stopping player from guessing more than one time
                     if(player.hasGuessed){
                         console.log("You have already guessed the word")
                         return; 
                     }
-                    
+                    console.log("After guessing",player.hasGuessed)
                     player.hasGuessed = true
+                    console.log("Correct guess",player.hasGuessed)
                     //broadcast the correc guess message to all 
                     for(const players of room.players){
                         if(players.socket && players.socket.readyState === WebSocket.OPEN){
@@ -455,36 +529,68 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                     //Scoring rules 
                     let points = room.time
                     player.score += points
+                    console.log(player.score)
+                    console.log(
+    "GUESS STATUS:",
+    room.players.map(p => ({
+        playerId: p.playerId,
+        isDrawer: p.playerId === drawerId,
+        connected: !!(
+            p.socket &&
+            p.socket.readyState === WebSocket.OPEN
+        ),
+        hasGuessed: p.hasGuessed
+    }))
+);
+
+console.log("ALL GUESSES =", allguesses);
                     if(allguesses){
+                        //CRITICAL BUG FIX 03
+                        //very important line to add 
+                        if (room.state !== ROOM_STATES.drawing) return;
+
                         room.state = ROOM_STATES.round_ended
                         clearInterval(room.timer)
                         
                         //Logic responsible for starting next round or ending the game
 
-                        if(room.currentRounds <= room.totalRounds){
+                        if(room.currentRounds < room.totalRounds){
                                 const playersLeft = room.players.filter(
                                     (player) => player.socket &&
                                             player.socket.readyState === WebSocket.OPEN
                                 )
-                                if(playersLeft.length <=1){
+                                if(playersLeft.length === 1){
                                     console.log("We have less players so wait")
                                     room.state = ROOM_STATES.waiting
-                                }else{
+                                }
+                                if(playersLeft.length > 1){
                                     console.log("Rounds remain and players enough so start next round")
                                     room.state = ROOM_STATES.starting_new_round
                                     startRound(room)
                                 }
                             }else{
                                 console.log("Game has fuckign ended you fuckign little bitch!!!")
-                        
-                            }
+                                //Broadcasting score
+                                for(const players of room.players){
+                                    console.log("Scoring")
+                                  if(players.socket && 
+                                    players.socket.readyState === WebSocket.OPEN  
+                                    ){
+                                    console.log("connection open")
+                                        players.socket.send(JSON.stringify({
+                                            type : "Players score",
+                                            score : players.score
+                                    }))
+                                    }
+                                }
+                                                }
                     }
     
-                    console.log("Correct guess")
+                    
                 }else{
                     console.log("Wrong guess")
                     for(const player of room.players){
-                        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                        if(player.socket && player.socket.readyState === WebSocket.OPEN && !player.hasGuessed){
                             player.socket.send(JSON.stringify({
                                 type : "chat",
                                 text : guess ,
@@ -524,7 +630,9 @@ function checkWord(room , playerId,drawer , message){
                 room.state = ROOM_STATES.drawing
                 timer(room, playerId) // timer should 
                 //broadcasting msg too all about the start of the round
-
+//CRITICAL BUG 06 HERE I THIING WE SHOULD CHANGE THE STATE OF THE ROOM FROM CHOOSING WORD TO DRAWING AND THEN CHECK IN GUESS WORD IF ROOM IS IN DRAWEING STATE 
+//Changin the state to drawing which act as a valiator to check if client is alowed to guess or not                 
+room.state = ROOM_STATES.drawing
                 for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
                         if(player.playerId !== playerId){
@@ -532,7 +640,7 @@ function checkWord(room , playerId,drawer , message){
                             message : "Game has fucking started"
                         }))}
                 }
-              console.log("Its not what a person says its who is saying that")  
+              console.log("Word choosen")  
             }
                 
 }

@@ -30,7 +30,7 @@ export function initWebSockets(server){
             return 
         }
         console.log("Chck3")
-    
+        player.score = 0
         player.socket = socket
         console.log(`Player ${playerId} has joined the room ${roomId}`)
         // Sending new player joined message

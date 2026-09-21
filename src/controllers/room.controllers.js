@@ -53,7 +53,11 @@ function join_room(req,res){
     
         // storing player isn the player array
         rooms[room_id].players.push({
-            playerId
+            playerId,
+            hasGuessed : false,
+            socket: null,
+            lastStrokeId: 0,
+            score: 0
         }) 
     // return all players
         return res.status(201).json("Player Entered the fucking room")
