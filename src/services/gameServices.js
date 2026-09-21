@@ -31,6 +31,17 @@ function startRound(room){
             console.log("Round started")
             room.strokes.length = 0
             room.currentRounds += 1
+
+            //HEY GPT is this correct way to tell all what round it is 
+            for(const players of room.players){
+                if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                    players.socket.send(JSON.stringify({
+                        type: "round_started",
+                        round: room.currentRounds
+
+                    }))
+                }
+            }
             
             //
             for(const player of room.players){
@@ -145,6 +156,16 @@ room.drawer = remainingDrawers[drawIndex];
             console.log("Sending drawer candidate words")
             if(room.drawer.socket && room.drawer.socket.readyState === WebSocket.OPEN){
             room.drawer.socket.send(JSON.stringify(wordChoiceMessage))
+            }
+            //HEY GPT check if this is correct way of telling others who drawer is ??
+            //Broadcasting message to all about who is the drawer
+            for(const otherplayers of connectedPlayers){
+                if(otherplayers.playerId !== room.drawer.playerId){
+                    otherPlayers.socket.send(JSON.stringify({
+                        message : "This is our drawer's Id",
+                        drawerId : room.drawer.playerId
+                    }))
+                }
             }
             room.state = ROOM_STATES.choosing_words
 

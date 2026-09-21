@@ -30,7 +30,7 @@ export function initWebSockets(server){
             return 
         }
         console.log("Chck3")
-        player.score = 0
+        // player.score = 0
         player.socket = socket
         console.log(`Player ${playerId} has joined the room ${roomId}`)
         // Sending new player joined message
@@ -44,6 +44,14 @@ export function initWebSockets(server){
             }
             }
         }
+        //HEY GPT is this correct way of sending list of already connecred player to recently joined player 
+        //Sending the currently joined player list of all the connected players 
+        const connectedPlayersToSend = room.players.filter(
+            (players) => players.socket && players.socket.readyState === WebSocket.OPEN && players.playerId !== playerId
+        )
+        player.socket.send(JSON.stringify({
+            all_connectedPlayers_list : connectedPlayersToSend
+        }))
         // socket.on("close" , (socket,request) => {
         //     const url = new URL(request.url , "http://localhost:3000")
         //     const roomId = url.searchParams.get("roomId")
