@@ -62,7 +62,8 @@ function join_room(req,res){
     // return all players
         return res.status(201).json({
             message : "Player Entered the fucking room",
-            playerId : playerId
+            playerId : playerId,
+            roomId : room_id
         })
     
 }
