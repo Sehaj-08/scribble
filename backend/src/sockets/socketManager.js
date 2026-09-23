@@ -3,20 +3,23 @@ import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
 
+let backendConnCounter = 0
+
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
     wss.on("connection" , (socket,request)=> {
-        console.log("Websocket connection established")
+        backendConnCounter++;
+        socket.connId = backendConnCounter;
+        
+        console.log(`[BACKEND socketManager] Websocket connection #${socket.connId} established`)
         const url = new URL(request.url , "http://localhost:3000")
         const roomId = url.searchParams.get("roomId")
         const playerId = url.searchParams.get("playerId")
-        console.log("WebSockets connection")
-        console.log("Room ID" , roomId)
-        console.log("Player ID" , playerId)
+        console.log(`[BACKEND socketManager] Room ID: ${roomId}, Player ID: ${playerId}`)
 
-    
         const room = rooms[roomId]
         if(!room){
+            console.log(`[BACKEND socketManager] Connection #${socket.connId} closing (1008): Room not found. Room exists: false`)
             socket.close(1008 , "Room not found")
             return;
         }
@@ -26,13 +29,21 @@ export function initWebSockets(server){
         )
         console.log("Chck2")
         if(!player){
+            console.log(`[BACKEND socketManager] Connection #${socket.connId} closing (1008): Player doesn't belong to this room`)
             socket.close(1008 , "Player doesnt belongs to this room")
             return 
         }
         console.log("Chck3")
         // player.score = 0
         player.socket = socket
-        console.log(`Player ${playerId} has joined the room ${roomId}`)
+        
+        //If roomDeleteTimre is already running stop it casue new player joined 
+        if(room.roomDeleteTimer){
+            clearTimeout(room.roomDeleteTimer)
+            room.roomDeleteTimer = null
+        }
+        
+        console.log(`[BACKEND socketManager] Player ${playerId} socket set to Connection #${socket.connId} in room ${roomId}`)
         // Sending new player joined message
         for (const player of room.players){
             if(player.playerId !== playerId){
@@ -67,6 +78,7 @@ export function initWebSockets(server){
         //Disconnection logic 
         syncStrokes(room , player)
         socket.on("close" , () => {
+            console.log(`[BACKEND socketManager] socket.on("close") triggered for Connection #${socket.connId}, Player=${playerId}, Room=${roomId}`)
             // if(playerId === room.drawer.playerId){
             //     drawerDisconnected()
             // }

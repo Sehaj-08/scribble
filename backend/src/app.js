@@ -25,7 +25,7 @@ initWebSockets(server)
 
 //server listening
 server.listen(port ,() =>{
-    console.log("Server has started you little brattt!!!")
+    console.log(`Server has started on port ${port} you little brattt!!!`)
 } )
 export {app}
 

@@ -20,7 +20,8 @@ function create_room(req,res){
             strokes : [],
             totalRounds : 5 ,
             currentRounds : 0,
-            alreadyMadeDrawers : [] 
+            alreadyMadeDrawers : [] ,
+            roomDeleteTimer: null
         } 
 
         //here we can make first player join

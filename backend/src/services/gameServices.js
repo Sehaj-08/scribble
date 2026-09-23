@@ -161,7 +161,7 @@ room.drawer = remainingDrawers[drawIndex];
             //Broadcasting message to all about who is the drawer
             for(const otherplayers of connectedPlayers){
                 if(otherplayers.playerId !== room.drawer.playerId){
-                    otherPlayers.socket.send(JSON.stringify({
+                    otherplayers.socket.send(JSON.stringify({
                         message : "This is our drawer's Id",
                         drawerId : room.drawer.playerId
                     }))
@@ -272,21 +272,24 @@ function timer(room,playerId){
 // }
 
 function disconnection(playerId , room , roomId,socket){
-    console.log(`Player with id ${playerId} has disconnected from room ${roomId}`)
-            const player = room.players.find(
-                (player) => player.playerId === playerId
-            )//DONT DELETE PERSON IMM AFTER DISCONNECTION GIVE CHANCE TO RECONNECT
-            // if(playerIndex !== -1){
-            //     room.players.splice(playerIndex , 1)
-            // }
-            if(!player){
-                return;
-            }   
-            
-            if(player.socket !== socket){  
-            return;
-        }
-        player.socket = null 
+    console.log(`[BACKEND gameServices] disconnection() called for Player=${playerId}, socket #${socket.connId}`)
+    const player = room.players.find(
+        (player) => player.playerId === playerId
+    )
+    if(!player){
+        console.log(`[BACKEND gameServices] player not found in room`)
+        return;
+    }   
+    
+    if(player.socket && player.socket !== socket){
+        const currentPlayerSocketId = player.socket.connId
+        console.log(`[BACKEND gameServices] player.socket (is #${currentPlayerSocketId}) !== disconnecting socket #${socket.connId}. Ignoring stale disconnection.`)
+        return;
+    }
+    
+    player.socket = null;
+    console.log(`[BACKEND gameServices] player.socket set to null for Player=${playerId}`)
+
         //CRITICLA BUG 04 exists on line 277 
         //SOlved in line 277
         //if one player is in room -- room is waiting -- no drawer selected -- no room.drawer exists
@@ -339,14 +342,29 @@ function disconnection(playerId , room , roomId,socket){
                         player.socket.readyState === WebSocket.OPEN
         )
         if(recalculatingConnectedPlayers.length === 0){
-                console.log("Now we have to delete the room man")
-                if (room.timer) {
-                    clearInterval(room.timer)
-                    room.timer = null 
-                }
-                delete rooms[roomId]
-                return ;     
+            console.log(`[BACKEND gameServices] 0 players left in room=${roomId}, starting grace period timer`)
+            if(!room.roomDeleteTimer){
+                room.roomDeleteTimer = setTimeout(() => {
+                    const currentRoom = rooms[roomId]
+                    if (!currentRoom) return; // Already deleted
+
+                    const currentlyConnectedPlayers = currentRoom.players.filter(
+                        (player) => player.socket &&
+                                    player.socket.readyState === WebSocket.OPEN
+                    )                  
+
+                    if(currentlyConnectedPlayers.length === 0){
+                        console.log(`[BACKEND gameServices] Grace period ended. Deleting room=${roomId}`)
+                        if (currentRoom.timer) {
+                            clearInterval(currentRoom.timer)
+                        }
+                        delete rooms[roomId]
+                    }
+                    currentRoom.roomDeleteTimer = null
+                }, 5000);
             }
+            return ;     
+        }
             if(recalculatingConnectedPlayers.length === 1){
                 //CRITICAL BUG 05 SOLVED HERE
                 //When waiting for other players -- waiting for round to start yet -- so timer should not be running in waiting state
