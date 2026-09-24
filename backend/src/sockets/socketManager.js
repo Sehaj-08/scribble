@@ -33,6 +33,13 @@ export function initWebSockets(server){
             socket.close(1008 , "Player doesnt belongs to this room")
             return 
         }
+        
+        // Close stale socket before assigning the new one to prevent disconnecting the new connection
+        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+            console.log(`[BACKEND socketManager] Player reconnecting. Closing stale socket. Room=${roomId}, Player=${playerId}`)
+            player.socket.close(1008, "Replaced by new connection");
+        }
+        
         console.log("Chck3")
         // player.score = 0
         player.socket = socket
@@ -58,11 +65,12 @@ export function initWebSockets(server){
         //HEY GPT is this correct way of sending list of already connecred player to recently joined player 
         //Sending the currently joined player list of all the connected players 
         const connectedPlayersToSend = room.players.filter(
-            (players) => players.socket && players.socket.readyState === WebSocket.OPEN && players.playerId !== playerId
+            (p) => p.socket && p.socket.readyState === WebSocket.OPEN && p.playerId !== playerId
         )
         player.socket.send(JSON.stringify({
             all_connectedPlayers_list : connectedPlayersToSend
         }))
+        
         // socket.on("close" , (socket,request) => {
         //     const url = new URL(request.url , "http://localhost:3000")
         //     const roomId = url.searchParams.get("roomId")

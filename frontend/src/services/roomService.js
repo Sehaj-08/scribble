@@ -61,17 +61,23 @@ export async function createRoom() {
  *      It validates if the room exists, generates a new playerId, and returns status 201.
  * 
  * @param {string} roomId - The unique room code to join
+ * @param {string} [reconnectPlayerId] - Optional existing player ID to reconnect with
  * @returns {Promise<{ roomId: string, playerId: string }>}
  */
-export async function joinRoom(roomId) {
+export async function joinRoom(roomId, reconnectPlayerId) {
   const cleanRoomId = roomId ? roomId.trim().toUpperCase() : ''
 
   if (!cleanRoomId) {
     throw new Error('Please enter a room ID before joining.')
   }
 
+  let url = `${API_BASE_URL}/api/rooms/join_rooms/${encodeURIComponent(cleanRoomId)}`
+  if (reconnectPlayerId) {
+    url += `?playerId=${encodeURIComponent(reconnectPlayerId)}`
+  }
+
   try {
-    const response = await fetch(`${API_BASE_URL}/api/rooms/join_rooms/${encodeURIComponent(cleanRoomId)}`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -98,6 +104,10 @@ export async function joinRoom(roomId) {
       }
 
       // Map backend-specific error strings into user-friendly feedback
+      if (response.status === 404 && errorMessage.toLowerCase().includes('player doesnt exist')) {
+        throw new Error('STALE_PLAYER_ID')
+      }
+      
       if (response.status === 400 || errorMessage.toLowerCase().includes('room no longer exists')) {
         throw new Error(`Room "${cleanRoomId}" does not exist or has already closed.`)
       }

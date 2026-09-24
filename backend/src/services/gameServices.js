@@ -289,7 +289,15 @@ function disconnection(playerId , room , roomId,socket){
     
     player.socket = null;
     console.log(`[BACKEND gameServices] player.socket set to null for Player=${playerId}`)
-
+    //TRYING to write the logic for sending msg to all which playe left so what his id cna be removed from the UI
+    for(const players of room.players){
+        if(players.socket && players.socket.readyState === WebSocket.OPEN){
+            players.socket.send(JSON.stringify({
+                message : "Player_left",
+                player_id : playerId
+            }))
+        }
+    }
         //CRITICLA BUG 04 exists on line 277 
         //SOlved in line 277
         //if one player is in room -- room is waiting -- no drawer selected -- no room.drawer exists
@@ -380,8 +388,9 @@ function disconnection(playerId , room , roomId,socket){
                     }   
                 }
             }
-            //here i think we should the condition for clearing the state when zero players are left 
-            
+            if(recalculatingConnectedPlayers.length > 1){
+
+            }
 }
 
 // function drawerDisconnected(){

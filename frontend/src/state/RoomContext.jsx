@@ -19,6 +19,11 @@ export function RoomProvider({ children }) {
   const setRoomData = ({ roomId: newRoomId, playerId: newPlayerId }) => {
     setRoomId(newRoomId || '')
     setPlayerId(newPlayerId || '')
+    
+    if (newRoomId && newPlayerId) {
+      sessionStorage.setItem('roomId', newRoomId)
+      sessionStorage.setItem('playerId', newPlayerId)
+    }
   }
 
   /**
@@ -36,6 +41,11 @@ export function RoomProvider({ children }) {
     setRoomId('')
     setPlayerId('')
     setCurrentPage('home')
+    
+    //COMMENTING THESE 2 SO THAT WHEN PLAYER WHO LEFT REJOINS GETS THE SAME PLAYER ID !!
+
+    // sessionStorage.removeItem('roomId')
+    // sessionStorage.removeItem('playerId')
   }
 
   const value = {

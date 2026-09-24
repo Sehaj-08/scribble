@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createRoom, joinRoom } from '../services/roomService.js'
 import { useRoom } from '../hooks/useRoom.js'
 
@@ -13,6 +13,9 @@ function Home() {
   const [roomIdInput, setRoomIdInput] = useState('')
   const [loadingAction, setLoadingAction] = useState(null) // 'create' | 'join' | null
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Add a ref-based lock to prevent double-clicks bypassing async state updates
+  const isActionLocked = useRef(false)
 
   const isBusy = loadingAction !== null
 
@@ -32,7 +35,8 @@ function Home() {
    *      and redirects to the Lobby screen.
    */
   const handleCreateRoom = async () => {
-    if (isBusy) return
+    if (isBusy || isActionLocked.current) return
+    isActionLocked.current = true
 
     setErrorMessage('')
     setLoadingAction('create')
@@ -46,6 +50,7 @@ function Home() {
       setErrorMessage(err.message || 'Failed to create room. Please try again.')
     } finally {
       setLoadingAction(null)
+      isActionLocked.current = false
     }
   }
 
@@ -56,7 +61,8 @@ function Home() {
    */
   const handleJoinRoom = async (e) => {
     if (e) e.preventDefault()
-    if (isBusy) return
+    if (isBusy || isActionLocked.current) return
+    isActionLocked.current = true
 
     const trimmedId = roomIdInput.trim().toUpperCase()
 
@@ -69,15 +75,28 @@ function Home() {
     setErrorMessage('')
     setLoadingAction('join')
 
+    const savedRoomId = sessionStorage.getItem('roomId')
+    const savedPlayerId = sessionStorage.getItem('playerId')
+    let reconnectPlayerId = null
+    if (savedRoomId === trimmedId && savedPlayerId) {
+      reconnectPlayerId = savedPlayerId
+    }
+
     try {
-      const room = await joinRoom(trimmedId)
+      const room = await joinRoom(trimmedId, reconnectPlayerId)
       // Store session data and transition to Lobby
       setRoomData({ roomId: room.roomId, playerId: room.playerId })
       navigate('lobby')
     } catch (err) {
+      if (err.message === 'STALE_PLAYER_ID') {
+        sessionStorage.removeItem('playerId')
+        setErrorMessage('Your previous session in this room expired. Please click Join Room again to enter as a new player.')
+        return
+      }
       setErrorMessage(err.message || 'Unable to join room. Please check the ID and try again.')
     } finally {
       setLoadingAction(null)
+      isActionLocked.current = false
     }
   }
 

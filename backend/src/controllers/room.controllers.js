@@ -42,28 +42,50 @@ function create_room(req,res){
     })
 }
 
+//VERY IMP AND GOOD LOGICAL improvements done in this function please see this 
 function join_room(req,res){
-    // check if rooms exists
+    // check if rooms exists 
         const {room_id} = req.params
-        
+        //Player id for reconnection  
+        const incomingPlayerId = req.query.playerId
+        const room = rooms[room_id]
+
         console.log(room_id)
-        if (!rooms[room_id]){
+        if (!room){
             return res.status(400).json("Room no longer exists")
         }
-        const playerId = Math.random().toString(36).substring(2, 10);
-    
+        //Both cases will be sending diff playerId to frontend 
+        //so use let player;
+        let player;
+        //Logic for sending the same id with which player joined earlier for reconnection 
+        if(incomingPlayerId){
+            player = room.players.find(
+                (player) => player.playerId === incomingPlayerId
+            )
+            if(!player){
+                return res.status(404).json({
+                    message : "Player doesnt exist"
+                })
+            }
+        }else
+          {
+            const playerId = Math.random().toString(36).substring(2, 10);
+        
+          
         // storing player isn the player array
-        rooms[room_id].players.push({
+        player = {
             playerId,
-            hasGuessed : false,
+            hasGuessed: false,
             socket: null,
             lastStrokeId: 0,
             score: 0
-        }) 
+        }
+        room.players.push(player) 
+    }
     // return all players
         return res.status(201).json({
             message : "Player Entered the fucking room",
-            playerId : playerId,
+            playerId : player.playerId,
             roomId : room_id
         })
     
