@@ -26,7 +26,7 @@ function startRound(room){
     
         const playersCount = connectedPlayers.length
                // 
-        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
+        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 3){
             //ROUND STARTS
             console.log("Round started")
             room.strokes.length = 0
@@ -309,6 +309,7 @@ function disconnection(playerId , room , roomId,socket){
         if(room.drawer && playerId === room.drawer.playerId){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
+                console.log("drawer left bro")
                 
                 for(const players of room.players){
                     if(players.socket && players.socket.readyState === WebSocket.OPEN){

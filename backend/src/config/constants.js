@@ -22,9 +22,14 @@ const CHOOSE_WORD = {
     WORD : "choose_word"
 }
 
+const CURRENT_STATE_SNAPSHOT = {
+    CURRENT_STATE_SNAPSHOT : "current_state_snapshot"
+}
+
 export {
     ROOM_STATES,
     STROKE_EVENTS,
     GUESS_EVENTS,
-    CHOOSE_WORD
+    CHOOSE_WORD,
+    CURRENT_STATE_SNAPSHOT
 }

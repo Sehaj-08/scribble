@@ -1,6 +1,6 @@
 import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
-import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
+import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNAPSHOT} from "../config/constants.js"
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
 
 let backendConnCounter = 0
@@ -94,10 +94,22 @@ export function initWebSockets(server){
         })
         //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
         if(player.socket && player.socket.readyState === WebSocket.OPEN){
-            if(room.state === ROOM_STATES.waiting)
+            if(room.state === ROOM_STATES.waiting){
             startRound(room ,player)
         }else{
+            console.log(room.state)
+            const current_state = {
+                type : CURRENT_STATE_SNAPSHOT.CURRENT_STATE_SNAPSHOT,
+                state : room.state,
+                currentRounds : room.currentRounds,
+                drawerId: room.drawer?.playerId ?? null,
+                // room_drawerId : room.drawer.playerId,
+                timer : room.timer,
+                
+            }
+            player.socket.send(JSON.stringify(current_state))
             console.log("New player joined the same game")
+        }
         }
 
         socket.on("message", (data) =>{
