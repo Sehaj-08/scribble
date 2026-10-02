@@ -7,6 +7,10 @@ const ROOM_STATES = {
     starting_new_round : "STARTING_NEW_ROUND"
 }
 
+const  DRAWER_LEFT = {
+    DRAWER_LEFT_WAITING : 'drawer_left_waiting',
+    DRAWER_LEFT_NEW_ROUND : "drawer_left_new_round"
+}
 //stroke events
 const STROKE_EVENTS = {
     POINT : "stroke_point",
@@ -31,5 +35,6 @@ export {
     STROKE_EVENTS,
     GUESS_EVENTS,
     CHOOSE_WORD,
-    CURRENT_STATE_SNAPSHOT
+    CURRENT_STATE_SNAPSHOT,
+    DRAWER_LEFT
 }

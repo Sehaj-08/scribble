@@ -1,4 +1,4 @@
-import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD} from "../config/constants.js"
+import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD, DRAWER_LEFT} from "../config/constants.js"
 import { WebSocketServer , WebSocket } from "ws";
 import { rooms } from "../store/roomStore.js";
 
@@ -26,7 +26,7 @@ function startRound(room){
     
         const playersCount = connectedPlayers.length
                // 
-        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 3){
+        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
             //ROUND STARTS
             console.log("Round started")
             room.strokes.length = 0
@@ -36,7 +36,7 @@ function startRound(room){
             for(const players of room.players){
                 if(players.socket && players.socket.readyState === WebSocket.OPEN){
                     players.socket.send(JSON.stringify({
-                        type: "round_started",
+                        type: ROOM_STATES.starting_new_round,
                         round: room.currentRounds
 
                     }))
@@ -310,10 +310,14 @@ function disconnection(playerId , room , roomId,socket){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
                 console.log("drawer left bro")
+                room.state = DRAWER_LEFT.DRAWER_LEFT
                 
                 for(const players of room.players){
                     if(players.socket && players.socket.readyState === WebSocket.OPEN){
-                        players.socket.send(JSON.stringify("Drawer humara kayar tha leave krr gya bitch!!!"))
+                        players.socket.send(JSON.stringify({
+                            type : DRAWER_LEFT.DRAWER_LEFT
+                            // msg : "Drawer humara kayar tha leave krr gya bitch!!!"
+                        }))
                     }
                 }//if drawer lefts mid round ONLY then check this 
                 //for normal players leaving this is not needed thats why we put this code in the if drawer left block 
@@ -323,16 +327,42 @@ function disconnection(playerId , room , roomId,socket){
                             (player) => player.socket &&
                                     player.socket.readyState === WebSocket.OPEN
                         )
-                        if(playersLeft.length === 1){
-                            console.log("We have less players so wait")
-                            room.state = ROOM_STATES.waiting
-                        }
+                        // if(playersLeft.length === 1){
+                        //     console.log('[BACKEND] Sending drawer_left_waiting')
+                        //     room.state = ROOM_STATES.waiting
+                        //     //added this for tellign all players drawer left and we have to wait for players 
+                        //         for (const player of playersLeft) {
+                        //             player.socket.send(JSON.stringify({
+                        //                 type: DRAWER_LEFT.DRAWER_LEFT_WAITING
+                        //             }))
+                        //         }
+
+                        // }
                         if(playersLeft.length > 1){
+                            console.log('[BACKEND] Sending drawer_left_new_round')
                             console.log("Rounds remain and players enough so start next round")
-                            room.state = ROOM_STATES.starting_new_round
-                            startRound(room)
-                        }
-                    }else{
+                            //will be used for displaying drawer left and round will start in 3 sec 
+                            
+                                for (const player of playersLeft) {
+                                    player.socket.send(JSON.stringify({
+                                        type: DRAWER_LEFT.DRAWER_LEFT_NEW_ROUND
+                                    }))
+                                }
+                                // delay of 3 sec before starting new round 
+                                setTimeout(() => {
+                                        room.state = ROOM_STATES.starting_new_round
+                                        startRound(room)
+                                        // for(const players of playersLeft){
+                                        //     if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                                        //         players.socket.send(JSON.stringify({
+                                        //             type : ROOM_STATES.starting_new_round,
+                                        //             round : room.currentRounds
+                                        //         }))
+                                        //     }
+                                        // }
+                                        
+                                    }, 3000)                        }
+                                }else{
                         console.log("Game has fuckign ended you fuckign little bitch!!!")
                         //Broadcasting Score
                         for(const players of room.players){
@@ -389,9 +419,9 @@ function disconnection(playerId , room , roomId,socket){
                     }   
                 }
             }
-            if(recalculatingConnectedPlayers.length > 1){
+            // if(recalculatingConnectedPlayers.length > 1){
 
-            }
+            // }
 }
 
 // function drawerDisconnected(){

@@ -9,15 +9,35 @@ import * as websocketService from '../websocket/websocketService.js'
  *      It also acts as the session layer that manages the WebSocket connection.
  */
 function Lobby() {
-  const { roomId, playerId, resetRoom } = useRoom()
+  const {roomId, playerId, resetRoom, gameState, navigate } = useRoom()
   const [wsStatus, setWsStatus] = useState('disconnected')
-  const [players, setPlayers] = useState([{ playerId, isMe: true }])
-  const [gameStarted, setGameStarted] = useState(false)
   const [copySuccess, setCopySuccess] = useState('')
 
+  // Derive values for the Lobby UI
+  const isGameStarted = gameState.gameState !== 'WAITING'
+
+  // Map players to include isMe prop erty for UI styling
+  const lobbyPlayers = gameState.players.map(p => ({
+    ...p,
+    isMe: p.playerId === playerId
+  }))
+
+  useEffect(() => {
+    console.log("[LOBBY] Rendering players:", lobbyPlayers)
+  }, [lobbyPlayers.length]) // Only log when player count changes to avoid spam
+
+  // Navigate to Game view when round starts
+  useEffect(() => {
+    if (isGameStarted) {
+      // Small timeout to allow users to read "Redirecting..."
+      const t = setTimeout(() => {
+        navigate('game')
+      }, 1500)
+      return () => clearTimeout(t)
+    }
+  }, [isGameStarted, navigate])
+
   // WHAT: Establish WebSocket connection when Lobby mounts.
-  // WHY: This is the appropriate time to connect since we now have roomId and playerId.
-  //      The websocketService handles duplicate protection, so React StrictMode double-invocations are safe.
   useEffect(() => {
     if (!roomId || !playerId) return
 
@@ -27,50 +47,13 @@ function Lobby() {
       setWsStatus(status)
     })
 
-    websocketService.setMessageCallback((msg) => {
-      console.log('Received WebSocket Message in Lobby:', msg)
-      
-      // Initial list of other players
-      if (msg.all_connectedPlayers_list) {
-        setPlayers(prev => {
-          const currentMe = prev.find(p => p.isMe)
-          const others = msg.all_connectedPlayers_list.map(p => ({
-            playerId: p.playerId,
-            isMe: false
-          }))
-          return [currentMe, ...others].filter(Boolean)
-        })
-      }
-
-      // New player joined
-      if (msg.type === 'player_joined') {
-        setPlayers(prev => {
-          // Avoid duplicates
-          if (prev.some(p => p.playerId === msg.playerId)) return prev
-          return [...prev, { playerId: msg.playerId, isMe: false }]
-        })
-      }
-
-      // Player left
-      if (msg.message === 'Player_left') {
-        setPlayers(prev => prev.filter(p => p.playerId !== msg.player_id))
-      }
-
-      // Game start detection
-      if (msg.type === 'round_started' || msg.message === 'Game has fucking started') {
-        setGameStarted(true)
-      }
-    })
-
-    // Connect to the room
-    websocketService.connect(roomId, playerId)
+    // The actual WebSocket message parsing is now centralized in RoomContext.jsx!
+    // Connection lifecycle is also centralized in RoomContext.jsx to persist across screens!
 
     // Cleanup when component unmounts
     return () => {
       console.log(`[FRONTEND Lobby] useEffect unmount cleanup called for roomId=${roomId}, playerId=${playerId}`)
       websocketService.setStatusCallback(null)
-      websocketService.setMessageCallback(null)
-      websocketService.close()
     }
   }, [roomId, playerId])
 
@@ -125,9 +108,9 @@ function Lobby() {
         </div>
 
         <div className="info-box" style={{ marginTop: '1.5rem', textAlign: 'left' }}>
-          <span className="info-label">Connected Players: {players.length}</span>
+          <span className="info-label">Connected Players: {lobbyPlayers.length}</span>
           <ul style={{ listStyleType: 'none', padding: 0, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {players.map((p, idx) => (
+            {lobbyPlayers.map((p, idx) => (
               <li 
                 key={idx} 
                 style={{ 
@@ -149,9 +132,9 @@ function Lobby() {
           </ul>
         </div>
 
-        <div className="lobby-notice" style={{ marginTop: '1.5rem', background: gameStarted ? '#ecfdf5' : '#fffbeb', borderLeft: gameStarted ? '4px solid #10b981' : '4px solid #f59e0b' }}>
-          <p style={{ margin: 0, fontWeight: '500', color: gameStarted ? '#065f46' : '#92400e' }}>
-            {gameStarted ? "🚀 Game Started! Redirecting to game..." : "⏳ Waiting for more players..."}
+        <div className="lobby-notice" style={{ marginTop: '1.5rem', background: isGameStarted ? '#ecfdf5' : '#fffbeb', borderLeft: isGameStarted ? '4px solid #10b981' : '4px solid #f59e0b' }}>
+          <p style={{ margin: 0, fontWeight: '500', color: isGameStarted ? '#065f46' : '#92400e' }}>
+            {isGameStarted ? "🚀 Game Started! Redirecting to game..." : "⏳ Waiting for more players..."}
           </p>
         </div>
 

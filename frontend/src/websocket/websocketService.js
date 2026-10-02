@@ -88,6 +88,7 @@ export function connect(roomId, playerId) {
         if (socket !== newSocket) return // Ignore events from stale sockets
         try {
             const message = JSON.parse(event.data)
+            console.log("[WS SERVICE] Raw message received:", message)
             if (messageCallback) {
                 messageCallback(message)
             }
