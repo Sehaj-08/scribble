@@ -3,7 +3,7 @@ import { RoomContext } from './roomContextInstance.js'
 import { gameReducer, initialGameState } from './gameReducer.js'
 import * as websocketService from '../websocket/websocketService.js'
 import { createEventDispatcher } from '../websocket/eventDispatcher.js'
-
+handleWebSocketMessage
 /**
  * WHAT: Provider component for managing active room session state (roomId, playerId, currentPage).
  * WHY: Enables persisting roomId and playerId when transitioning between Home, Lobby,

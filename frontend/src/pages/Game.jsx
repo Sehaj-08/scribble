@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { useRoom } from '../hooks/useRoom.js'
-
+import * as websocketService from '../websocket/websocketService.js'
 /**
  * WHAT: The main active Game screen (Phase 2.3).
  * WHY: Renders the centralized game state and controls visibility based on the current state.
@@ -15,6 +16,7 @@ function Game() {
     drawerId,
     gameState,
     word,
+    candidateWords,
     notification,
     players // Optional: can be used to show scores
   } = globalState
@@ -22,6 +24,25 @@ function Game() {
   // Derive if I am the drawer. 
   // No need to create a duplicate `isDrawer` state in the reducer.
   const isDrawer = playerId === drawerId
+  const [isWordSelecting, setIsWordSelecting] = useState(false)
+
+  // Reset selection state when the phase changes
+  useEffect(() => {
+    if (gameState !== 'CHOOSING_WORD') {
+      setIsWordSelecting(false)
+    }
+  }, [gameState])
+
+  const handleWordSelect = (wordId) => {
+    if (isWordSelecting) return
+    setIsWordSelecting(true)
+    
+    websocketService.send({
+      type: "choose_word",
+      wordId: wordId
+    })
+  }
+
 console.log('[GAME] gameState:', gameState)
 console.log('[GAME] notification:', notification)
 console.log('[GAME] drawerId:', drawerId)
@@ -74,7 +95,24 @@ console.log('[GAME] drawerId:', drawerId)
             {isDrawer ? (
               <>
                 <h3>Choose a Word</h3>
-                <p>Select a word to draw! (Controls coming in later phases)</p>
+                <p>Select a word to draw!</p>
+                <div className="word-cards-container" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+                  {candidateWords && candidateWords.length > 0 ? (
+                    candidateWords.map((cand) => (
+                      <button 
+                        key={cand.wordId}
+                        className="primary-btn word-card"
+                        onClick={() => handleWordSelect(cand.wordId)}
+                        disabled={isWordSelecting}
+                        style={{ padding: '1rem 1.5rem', fontSize: '1.1rem', cursor: isWordSelecting ? 'not-allowed' : 'pointer' }}
+                      >
+                        {cand.word}
+                      </button>
+                    ))
+                  ) : (
+                    <p>Loading words...</p>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -93,7 +131,7 @@ console.log('[GAME] drawerId:', drawerId)
             </div>
             
             {/* Invalid Control Prevention: We only show guessing controls to non-drawers */}
-            {!isDrawer && (
+            {!isDrawer && ( 
               <div className="guess-controls-placeholder">
                 <input type="text" placeholder="Type your guess here..." disabled={true} />
                 <button disabled={true}>Guess</button>
