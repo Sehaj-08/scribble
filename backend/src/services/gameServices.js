@@ -210,7 +210,7 @@ function timer(room,playerId){
             for(const player of room.players){
                 if(player.socket && player.socket.readyState === WebSocket.OPEN){
                     player.socket.send(JSON.stringify({
-                        message : "Aye kya rheee lawdee!!",
+                        type : ROOM_STATES.round_ended,
                         word : room.word
                     }))
                 }
@@ -623,13 +623,22 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
     }))
 );
 
-console.log("ALL GUESSES =", allguesses);
+    console.log("ALL GUESSES =", allguesses);
                     if(allguesses){
                         //CRITICAL BUG FIX 03
                         //very important line to add 
                         if (room.state !== ROOM_STATES.drawing) return;
 
                         room.state = ROOM_STATES.round_ended
+                        //for clearing chats once round has ended 
+                        for(const player of room.players){
+                            if(player.socket && player.socket.readyState === WebSocket.OPEN){
+                                player.socket.send(JSON.stringify({
+                                    type : ROOM_STATES.round_ended,
+                                    word : room.word
+                                }))
+                            }
+                        }
                         clearInterval(room.timer)
                         
                         //Logic responsible for starting next round or ending the game

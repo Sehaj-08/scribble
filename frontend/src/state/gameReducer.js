@@ -106,7 +106,9 @@ export function gameReducer(state, action) {
       return {
         ...state,
         gameState: GAME_STATES.ROUND_ENDED,
-        word: payload.word
+        word: payload.word,
+        chatMessages: [],
+        timeLeft: 0
       }
 
     case 'CORRECT_GUESS':

@@ -182,6 +182,9 @@ export function createEventDispatcher(dispatch, playerId) {
                 case 'drawer_left_new_round':
                     console.log("[DISPATCHER] Routing → DRAWER_LEFT_NEW_ROUND")
                     return handleDrawerLeftNewRound(message, dispatch)
+                case 'ROUND_ENDED': 
+                    console.log("[DISPATCHER] Routing → ROUND_ENDED")
+                    return handleRoundEnded(message, dispatch)
                 default:
                     console.warn("[WebSocket Dispatcher] Unknown event type:", message.type, message)
                     return
@@ -200,9 +203,7 @@ export function createEventDispatcher(dispatch, playerId) {
                 case 'Game has fucking started': 
                     console.log("[DISPATCHER] Routing → GAME_STARTED")
                     return handleGameStarted(message, dispatch)
-                case 'Aye kya rheee lawdee!!': 
-                    console.log("[DISPATCHER] Routing → ROUND_ENDED")
-                    return handleRoundEnded(message, dispatch)
+                
                 case 'Waiting for players to fucking join': 
                     console.log("[DISPATCHER] Routing → WAITING")
                     return handleWaiting(message, dispatch)
