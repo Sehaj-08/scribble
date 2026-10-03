@@ -574,6 +574,7 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                 if(guess === currentWord){
                     //stopping player from guessing more than one time
                     if(player.hasGuessed){
+                        player.socket.send(JSON.stringify("You have already guessed the word"))
                         console.log("You have already guessed the word")
                         return; 
                     }
@@ -669,11 +670,11 @@ console.log("ALL GUESSES =", allguesses);
                 }else{
                     console.log("Wrong guess")
                     for(const player of room.players){
-                        if(player.socket && player.socket.readyState === WebSocket.OPEN && !player.hasGuessed){
+                        if(player.socket && player.socket.readyState === WebSocket.OPEN ){
                             player.socket.send(JSON.stringify({
                                 type : "chat",
                                 text : guess ,
-                                playerId : player.playerId                       
+                                playerId : playerId                       
                             }))
                         }
                     }

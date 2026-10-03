@@ -114,7 +114,12 @@ export function gameReducer(state, action) {
         ...state,
         players: state.players.map(p => 
           p.playerId === payload.playerId ? { ...p, hasGuessed: true } : p
-        )
+        ),
+        chatMessages: [...state.chatMessages, {
+          senderId: 'System',
+          text: `${payload.playerId} guessed correctly!`,
+          type: 'correct_guess'
+        }]
       }
 
     case 'SCORE_UPDATE':

@@ -104,7 +104,7 @@ export function initWebSockets(server){
                 currentRounds : room.currentRounds,
                 drawerId: room.drawer?.playerId ?? null,
                 // room_drawerId : room.drawer.playerId,
-                timer : room.timer,
+                timer : room.time,
                 
             }
             player.socket.send(JSON.stringify(current_state))

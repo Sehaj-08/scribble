@@ -18,13 +18,17 @@ function Game() {
     word,
     candidateWords,
     notification,
+    chatMessages,
     players // Optional: can be used to show scores
   } = globalState
 
   // Derive if I am the drawer. 
   // No need to create a duplicate `isDrawer` state in the reducer.
   const isDrawer = playerId === drawerId
+  const localPlayer = players.find(p => p.playerId === playerId)
+  const hasGuessed = localPlayer ? localPlayer.hasGuessed : false
   const [isWordSelecting, setIsWordSelecting] = useState(false)
+  const [guessText, setGuessText] = useState('')
 
   // Reset selection state when the phase changes
   useEffect(() => {
@@ -41,6 +45,18 @@ function Game() {
       type: "choose_word",
       wordId: wordId
     })
+  }
+
+  const handleGuessSubmit = (e) => {
+    e.preventDefault()
+    const cleanedGuess = guessText.trim()
+    if (!cleanedGuess) return
+
+    websocketService.send({
+      type: "guess",
+      text: cleanedGuess
+    })
+    setGuessText('')
   }
 
 console.log('[GAME] gameState:', gameState)
@@ -130,12 +146,19 @@ console.log('[GAME] drawerId:', drawerId)
               {isDrawer ? '🎨 You are drawing! (Canvas coming soon)' : '👀 Watch the drawing! (Canvas coming soon)'}
             </div>
             
-            {/* Invalid Control Prevention: We only show guessing controls to non-drawers */}
+            {/* Phase 2.5: Guessing controls for non-drawers */}
             {!isDrawer && ( 
-              <div className="guess-controls-placeholder">
-                <input type="text" placeholder="Type your guess here..." disabled={true} />
-                <button disabled={true}>Guess</button>
-              </div>
+              <form onSubmit={handleGuessSubmit} className="guess-controls" style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', width: '100%', maxWidth: '400px', margin: '1rem auto 0' }}>
+                <input 
+                  type="text" 
+                  placeholder={hasGuessed ? "You already guessed it!" : "Type your guess here..."} 
+                  value={guessText}
+                  onChange={(e) => setGuessText(e.target.value)}
+                  style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                  disabled={hasGuessed}
+                />
+                <button type="submit" className="primary-btn" disabled={hasGuessed}>Guess</button>
+              </form>
             )}
           </div>
         )}
@@ -155,6 +178,29 @@ console.log('[GAME] drawerId:', drawerId)
             <p>Starting the next round...</p>
           </div>
         )}
+
+        {/* Chat / Event Log */}
+        <div className="chat-panel" style={{ marginTop: '2rem', textAlign: 'left', borderTop: '1px solid #ccc', paddingTop: '1rem', maxHeight: '200px', overflowY: 'auto' }}>
+          <h4>Chat & Guesses</h4>
+          {chatMessages.length === 0 && <p style={{ color: '#888', fontStyle: 'italic', fontSize: '0.9rem' }}>No activity yet...</p>}
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0.5rem 0 0 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {chatMessages.map((msg, idx) => (
+              <li key={idx} style={{ 
+                padding: '4px 8px',
+                borderRadius: '4px',
+                background: msg.type === 'correct_guess' ? '#ecfdf5' : 'transparent',
+                color: msg.type === 'correct_guess' ? '#065f46' : 'inherit',
+                fontWeight: msg.type === 'correct_guess' ? 'bold' : 'normal'
+              }}>
+                {msg.type === 'correct_guess' ? (
+                  <span>🟢 {msg.text}</span>
+                ) : (
+                  <span><strong>{msg.senderId}:</strong> {msg.text}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       </main>
 
       {/* Footer / Controls */}
