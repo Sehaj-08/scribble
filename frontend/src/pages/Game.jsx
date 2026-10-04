@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRoom } from '../hooks/useRoom.js'
 import * as websocketService from '../websocket/websocketService.js'
+import Canvas from '../components/Canvas.jsx'
 /**
  * WHAT: The main active Game screen (Phase 2.3).
  * WHY: Renders the centralized game state and controls visibility based on the current state.
@@ -142,9 +143,7 @@ console.log('[GAME] drawerId:', drawerId)
         {/* State: DRAWING */}
         {gameState === 'DRAWING' && (
           <div className="state-panel active-round">
-            <div className="canvas-placeholder">
-              {isDrawer ? '🎨 You are drawing! (Canvas coming soon)' : '👀 Watch the drawing! (Canvas coming soon)'}
-            </div>
+            <Canvas isDrawer={isDrawer} />
             
             {/* Phase 2.5: Guessing controls for non-drawers */}
             {!isDrawer && ( 

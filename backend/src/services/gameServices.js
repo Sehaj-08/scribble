@@ -736,10 +736,10 @@ function checkWord(room , playerId,drawer , message){
 room.state = ROOM_STATES.drawing
                 for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        if(player.playerId !== playerId){
+                        // if(player.playerId !== playerId){
                             player.socket.send(JSON.stringify({
                             message : "Game has fucking started"
-                        }))}
+                        }))
                 }
               console.log("Word choosen")  
             }
