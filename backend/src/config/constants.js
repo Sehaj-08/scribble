@@ -5,7 +5,8 @@ const ROOM_STATES = {
     round_ended : "ROUND_ENDED",
     choosing_words : "CHOOSING_WORD"    ,
     starting_new_round : "STARTING_NEW_ROUND",
-    clear_chat : "CLEAR_CHAT"
+    game_over: "GAME_OVER"
+    // clear_chat : "CLEAR_CHAT"
 }
 
 const  DRAWER_LEFT = {

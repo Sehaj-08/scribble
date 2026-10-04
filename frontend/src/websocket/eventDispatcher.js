@@ -65,8 +65,8 @@ function handleCorrectGuess(message, dispatch) {
     dispatch(action)
 }
 
-function handleScoreUpdate(message, dispatch, playerId) {
-    const action = { type: 'SCORE_UPDATE', payload: { score: message.score, myPlayerId: playerId } }
+function handleGameOver(message, dispatch, playerId) {
+    const action = { type: 'GAME_OVER', payload: { score: message.score } }
     console.log("[HANDLER] Dispatching:", action)
     dispatch(action)
 }
@@ -108,7 +108,7 @@ function handleCurrentStateSnapshot(message , dispatch){
     console.log("time" , message.time)
     console.log("drawerid",message.drawerId)
     console.log("rounds",message.currentRounds)
-   const action = {type : "CURRENT_STATE_SNAPSHOT" , 
+   const action = {type : "CURRENT_STATE_SNAPSHOT" ,        
     payload : {
         state : message.state,
         currentRounds: message.currentRounds,
@@ -163,9 +163,9 @@ export function createEventDispatcher(dispatch, playerId) {
                 case 'correct_guess': 
                     console.log("[DISPATCHER] Routing → CORRECT_GUESS")
                     return handleCorrectGuess(message, dispatch)
-                case 'Players score': 
-                    console.log("[DISPATCHER] Routing → SCORE_UPDATE")
-                    return handleScoreUpdate(message, dispatch, playerId)
+                case 'GAME_OVER': 
+                    console.log("[DISPATCHER] Routing → GAME_OVER")
+                    return handleGameOver(message, dispatch, playerId)
                 case 'chat': 
                     console.log("[DISPATCHER] Routing → CHAT_MESSAGE")
                     return handleChat(message, dispatch)

@@ -3,16 +3,26 @@ import { WebSocketServer , WebSocket } from "ws";
 import { rooms } from "../store/roomStore.js";
 
 
+function finalScore(room){
+ const finalScore = room.players.map(player => ({
+        playerId: player.playerId,
+        score: player.score
+    }))
+    return finalScore
+}
+
 function startRound(room){
     //ROUND START LOGIC
     if(room.currentRounds >= room.totalRounds){
         console.log("Game gas ended")
+        // let finalScores = finalScores(room)
         room.alreadyMadeDrawers.length = 0
+        room.state = ROOM_STATES.game_over
         for(const players of room.players){
             if(players.socket && players.socket.readyState === WebSocket.OPEN){
                 players.socket.send(JSON.stringify({
-                    type : "Players score",
-                    score : players.score
+                    type : ROOM_STATES.game_over,
+                    score : finalScore(room)
             }))
             }
         }
@@ -232,12 +242,13 @@ function timer(room,playerId){
                 }
             }else{
                 console.log("Timer Ended, Game has fuckign ended you fuckign little bitch!!!")
+                room.state = ROOM_STATES.game_over
                 //Broadacasting score
                 for(const players of room.players){
                 if(players.socket && players.socket.readyState === WebSocket.OPEN){
                     players.socket.send(JSON.stringify({
-                        type : "Players score",
-                        score : players.score
+                        type : ROOM_STATES.game_over,
+                        score : finalScore(room)
                 }))
             }
         }
@@ -659,6 +670,7 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                                 }
                             }else{
                                 console.log("Game has fuckign ended you fuckign little bitch!!!")
+                                room.state = ROOM_STATES.game_over
                                 //Broadcasting score
                                 for(const players of room.players){
                                     console.log("Scoring")
@@ -667,8 +679,8 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                                     ){
                                     console.log("connection open")
                                         players.socket.send(JSON.stringify({
-                                            type : "Players score",
-                                            score : players.score
+                                            type : ROOM_STATES.game_over,
+                                            score : finalScore(room)
                                     }))
                                     }
                                 }

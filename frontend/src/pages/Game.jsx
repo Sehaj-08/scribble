@@ -178,6 +178,32 @@ console.log('[GAME] drawerId:', drawerId)
             <p>Starting the next round...</p>
           </div>
         )}
+        {/* State: GAME_OVER */}
+{gameState === 'GAME_OVER' && (
+  <div className="state-panel">
+    <h3>🎉 Game Over!</h3>
+    <p>Final Scores</p>
+
+    <ul style={{ listStyle: 'none', padding: 0 }}>
+      {[...players]
+        .sort((a, b) => b.score - a.score)
+        .map((player, index) => (
+          <li
+            key={player.playerId}
+            style={{
+              fontSize: '1.1rem',
+              margin: '0.5rem 0'
+            }}
+          >
+            <strong>#{index + 1}</strong>{' '}
+            {player.playerId === playerId ? 'You' : player.playerId}
+            {' — '}
+            {player.score} pts
+          </li>
+        ))}
+    </ul>
+  </div>
+)}
 
         {/* Chat / Event Log */}
         <div className="chat-panel" style={{ marginTop: '2rem', textAlign: 'left', borderTop: '1px solid #ccc', paddingTop: '1rem', maxHeight: '200px', overflowY: 'auto' }}>

@@ -3,7 +3,8 @@ export const GAME_STATES = {
   CHOOSING_WORD: 'CHOOSING_WORD',
   DRAWING: 'DRAWING',
   ROUND_ENDED: 'ROUND_ENDED',
-  STARTING_NEW_ROUND: 'STARTING_NEW_ROUND'
+  STARTING_NEW_ROUND: 'STARTING_NEW_ROUND',
+  GAME_OVER: 'GAME_OVER'
 }
 
 export const initialGameState = {
@@ -124,14 +125,20 @@ export function gameReducer(state, action) {
         }]
       }
 
-    case 'SCORE_UPDATE':
-      return {
+    case 'GAME_OVER':
+    return {
         ...state,
-        // The backend currently only sends the score for the current player
-        players: state.players.map(p => 
-          p.playerId === payload.myPlayerId ? { ...p, score: payload.score } : p
-        )
-      }
+        gameState: GAME_STATES.GAME_OVER,
+        players: state.players.map(player => {
+            const finalPlayer = payload.score.find(
+                score => score.playerId === player.playerId
+            )
+
+            return finalPlayer
+                ? { ...player, score: finalPlayer.score }
+                : player
+        })
+    }
 
     case 'CHAT_MESSAGE':
       return {
