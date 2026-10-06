@@ -502,6 +502,13 @@ function syncStrokes(room, player) {
     const missingStrokes = room.strokes.filter(
         stroke => stroke.strokeId > player.lastStrokeId
     );
+    console.log(
+  "SYNC CHECK:",
+  "player.lastStrokeId =", player.lastStrokeId,
+  "stored strokes =", room.strokes.length
+)
+
+console.log("MISSING STROKES =", missingStrokes)
 
     for (const stroke of missingStrokes) {
 
@@ -509,6 +516,7 @@ function syncStrokes(room, player) {
             player.socket &&
             player.socket.readyState === WebSocket.OPEN
         ) {
+            console.log("Missing strokes being sent to players")
             player.socket.send(JSON.stringify(stroke));
             player.lastStrokeId = stroke.strokeId;
         }

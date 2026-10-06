@@ -1,7 +1,7 @@
 // This file separates the identification and routing of WebSocket messages
 // from the React component lifecycle and the actual state mutations.
 
-import { resetStrokeId } from './strokeProtocol.js'
+import { resetStrokeId, bufferIncomingStroke, clearStrokeBuffer } from './strokeProtocol.js'
 
 // ---------------------------------------------------------
 // SMALL HANDLERS
@@ -31,6 +31,8 @@ function handleRoundStarted(message, dispatch) {
     dispatch(action)
     // Reset stroke counter for the new round to keep drawing sync stable
     resetStrokeId()
+    // Clear any historical buffer from the previous round just in case
+    clearStrokeBuffer()
 }
 
 function handleDrawerSelected(message, dispatch) {
@@ -152,6 +154,11 @@ export function createEventDispatcher(dispatch, playerId) {
         // 2. Route by `type`
         if (message.type) {
             switch (message.type) {
+                case 'stroke_point':
+                    console.log("🔥🔥🔥areey bhadwe we have received ths fucking stroke_point message")
+                    // Phase 3.5: Send it through the buffer in case Canvas isn't mounted yet
+                    bufferIncomingStroke(message)
+                    return
                 case 'player_joined': 
                     console.log("[DISPATCHER] Routing → PLAYER_JOINED")
                     return handlePlayerJoined(message, dispatch)

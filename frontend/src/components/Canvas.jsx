@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import * as websocketService from '../websocket/websocketService.js';
-import { createStrokePointMessage } from '../websocket/strokeProtocol.js';
+import { createStrokePointMessage, setCanvasReady } from '../websocket/strokeProtocol.js';
 
 export default function Canvas({ isDrawer }) {
   const canvasRef = useRef(null);
@@ -13,15 +13,58 @@ export default function Canvas({ isDrawer }) {
     
     // Set a fixed internal coordinate system (e.g. 800x600).
     // CSS handles making the actual element responsive.
-    canvas.width = 800;
-    canvas.height = 600;
+    // Only assign and wipe if it isn't already 800x600
+if (canvas.width !== 800) canvas.width = 800;
+if (canvas.height !== 600) canvas.height = 600;
+
     
     const ctx = canvas.getContext('2d');
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#000000';
+        console.log("🧼 CANVAS INITIALIZED / RESET");
+
   }, []);
+
+  const lastRemoteStrokeIdRef = useRef(-1);
+
+  useEffect(() => {
+    const handleRemoteStroke = (e) => {
+      console.log("🔥🔥CANVAS RECEIVED:", e.detail);
+      // If we are the local drawer, we ignore incoming strokes to avoid echo loops
+      if (isDrawer) return;
+
+      const { x, y, strokeId, newStroke } = e.detail;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      // Check if the drawer explicitly marked this as a new stroke,
+      // or if we dropped a packet and the strokeId isn't perfectly continuous.
+      if (newStroke || lastRemoteStrokeIdRef.current === -1 || strokeId !== lastRemoteStrokeIdRef.current + 1) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      lastRemoteStrokeIdRef.current = strokeId;
+    };
+
+    window.addEventListener('remote_stroke_point', handleRemoteStroke);
+    
+    // Phase 3.5: Tell the protocol module we are ready to receive historical/buffered strokes
+    setCanvasReady(true);
+    
+    return () => {
+      setCanvasReady(false);
+      window.removeEventListener('remote_stroke_point', handleRemoteStroke);
+    };
+  }, [isDrawer]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
@@ -58,7 +101,8 @@ export default function Canvas({ isDrawer }) {
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
     
-    const msg = createStrokePointMessage(coords.x, coords.y);
+    // Send with isNewStroke = true
+    const msg = createStrokePointMessage(coords.x, coords.y, true);
     websocketService.send(msg);
   };
 
@@ -72,7 +116,8 @@ export default function Canvas({ isDrawer }) {
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
 
-    const msg = createStrokePointMessage(coords.x, coords.y);
+    // Send with isNewStroke = false (default)
+    const msg = createStrokePointMessage(coords.x, coords.y, false);
     websocketService.send(msg);
   };
 
