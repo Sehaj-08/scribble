@@ -1,4 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
+import * as websocketService from '../websocket/websocketService.js';
+import { createStrokePointMessage } from '../websocket/strokeProtocol.js';
 
 export default function Canvas({ isDrawer }) {
   const canvasRef = useRef(null);
@@ -55,6 +57,9 @@ export default function Canvas({ isDrawer }) {
     // Draw a single dot immediately in case the user just clicks without dragging
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
+    
+    const msg = createStrokePointMessage(coords.x, coords.y);
+    websocketService.send(msg);
   };
 
   const draw = (e) => {
@@ -66,6 +71,9 @@ export default function Canvas({ isDrawer }) {
     const ctx = canvasRef.current.getContext('2d');
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
+
+    const msg = createStrokePointMessage(coords.x, coords.y);
+    websocketService.send(msg);
   };
 
   const stopDrawing = () => {

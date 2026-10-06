@@ -1,6 +1,8 @@
 // This file separates the identification and routing of WebSocket messages
 // from the React component lifecycle and the actual state mutations.
 
+import { resetStrokeId } from './strokeProtocol.js'
+
 // ---------------------------------------------------------
 // SMALL HANDLERS
 // ---------------------------------------------------------
@@ -27,6 +29,8 @@ function handleRoundStarted(message, dispatch) {
     const action = { type: 'ROUND_STARTED', payload: { round: message.round } }
     console.log("[HANDLER] Dispatching:", action)
     dispatch(action)
+    // Reset stroke counter for the new round to keep drawing sync stable
+    resetStrokeId()
 }
 
 function handleDrawerSelected(message, dispatch) {
