@@ -299,6 +299,15 @@ function disconnection(playerId , room , roomId,socket){
     }
     
     player.socket = null;
+    //this code will delete the player after 5 sec is disconnection
+    setTimeout(() => {
+        const index = room.players.indexOf(player)
+        if(index !== -1 && player.socket === null){
+            room.players.splice(index,1)
+        }
+    }, 5000);
+    player.lastStrokeId = 0;
+    console.log("Player's data when he left" , player)
     console.log(`[BACKEND gameServices] player.socket set to null for Player=${playerId}`)
     //TRYING to write the logic for sending msg to all which playe left so what his id cna be removed from the UI
     for(const players of room.players){

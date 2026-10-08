@@ -1,6 +1,6 @@
 import "dotenv/config"
 
-
+import cors from "cors"
 import express from "express"
 import { clearInterval } from "timers"
 import {rooms} from "./store/roomStore.js"
@@ -9,6 +9,12 @@ import http from "http"
 import {initWebSockets} from "./sockets/socketManager.js"
 const app = express()
 const port = process.env.PORT || 8000
+
+
+
+app.use(cors({
+  origin: "http://localhost:5173"
+}))
 
 //req parsing
 app.use(express.json())

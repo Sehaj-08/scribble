@@ -152,6 +152,7 @@ console.log('[GAME] drawerId:', drawerId)
                   type="text" 
                   placeholder={hasGuessed ? "You already guessed it!" : "Type your guess here..."} 
                   value={guessText}
+                  maxLength={20}
                   onChange={(e) => setGuessText(e.target.value)}
                   style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
                   disabled={hasGuessed}

@@ -2,7 +2,7 @@ import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNAPSHOT} from "../config/constants.js"
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
-
+import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
 
 export function initWebSockets(server){
@@ -53,6 +53,7 @@ export function initWebSockets(server){
         console.log(`[BACKEND socketManager] Player ${playerId} socket set to Connection #${socket.connId} in room ${roomId}`)
         // Sending new player joined message
         for (const player of room.players){
+            console.log("Sending player jonied message to all")
             if(player.playerId !== playerId){
             if(player.socket && player.socket.readyState === WebSocket.OPEN){
                 player.socket.send(JSON.stringify({
@@ -84,6 +85,7 @@ export function initWebSockets(server){
         //2+ Players then start the game
         
         //Disconnection logic 
+        console.log("See if syncStrokes is gettign triggered")
         syncStrokes(room , player)
         socket.on("close" , () => {
             console.log(`[BACKEND socketManager] socket.on("close") triggered for Connection #${socket.connId}, Player=${playerId}, Room=${roomId}`)
@@ -93,7 +95,7 @@ export function initWebSockets(server){
             disconnection(playerId,room,roomId,socket)
         })
         //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
-        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length <=4 ){
             if(room.state === ROOM_STATES.waiting){
             startRound(room ,player)
         }else{
@@ -110,12 +112,16 @@ export function initWebSockets(server){
             player.socket.send(JSON.stringify(current_state))
             console.log("New player joined the same game")
         }
+        }else{
+            console.log("Romo is full you little fucking folish weasel")
         }
 
         socket.on("message", (data) =>{
             const message =  JSON.parse(data)
-            if(!message){
-                console.log("No message received")
+            const result = validator(message)
+            if(!result.valid){
+                console.log("message didnt pass the validation")
+                return
             }
             
             if(message.type===STROKE_EVENTS.POINT){
