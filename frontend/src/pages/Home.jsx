@@ -31,7 +31,7 @@ function Home() {
 
   /**
    * WHAT: Handles clicking the "Create Room" button.
-   * WHY: Triggers GET /api/rooms/rooms, stores returned roomId & playerId,
+   * WHY: Triggers GET  , stores returned roomId & playerId,
    *      and redirects to the Lobby screen.
    */
   const handleCreateRoom = async () => {

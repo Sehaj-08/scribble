@@ -4,6 +4,8 @@ import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNA
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
 import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
+//Do one correctlion think of applying rate limiting only on guess messages 
+const MAX_MESSAGES_PER_SECOND = 120
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -25,7 +27,9 @@ export function initWebSockets(server){
         }
         console.log("Chck1")
         const player = room.players.find(
-            (player) => player.playerId == playerId
+            (player) => player.playerId === playerId
+        ) || room.waitingPlayers.find(
+            (player) => player.playerId === playerId
         )
         console.log("Chck2")
         if(!player){
@@ -83,7 +87,8 @@ export function initWebSockets(server){
         //     console.log("Hey you lill fuck!!" , player)
         // })
         //2+ Players then start the game
-        
+        let messageCount = 0
+        let windowStart = Date.now()
         //Disconnection logic 
         console.log("See if syncStrokes is gettign triggered")
         syncStrokes(room , player)
@@ -95,7 +100,7 @@ export function initWebSockets(server){
             disconnection(playerId,room,roomId,socket)
         })
         //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
-        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length <=4 ){
+        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length <=4 && !room.waitingPlayers.includes(player)){
             if(room.state === ROOM_STATES.waiting){
             startRound(room ,player)
         }else{
@@ -117,6 +122,20 @@ export function initWebSockets(server){
         }
 
         socket.on("message", (data) =>{
+            //applying ratte limiting 
+            const now = Date.now()
+
+    if (now - windowStart >= 1000) {
+        messageCount = 0
+        windowStart = now
+    }
+
+    if (messageCount >= MAX_MESSAGES_PER_SECOND) {
+        console.log(`Rate limit exceeded for player ${playerId}`)
+        return
+    }
+
+    messageCount++
             const message =  JSON.parse(data)
             const result = validator(message)
             if(!result.valid){

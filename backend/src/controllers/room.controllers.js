@@ -16,6 +16,7 @@ function create_room(req,res){
     // create playes for that rooom
         rooms[roomId] = {
             players : [],
+            waitingPlayers: [],
             state : ROOM_STATES.waiting,
             strokes : [],
             totalRounds : 5 ,
@@ -80,7 +81,12 @@ function join_room(req,res){
             lastStrokeId: 0,
             score: 0
         }
-        room.players.push(player) 
+        if(room.players.length < 4){
+            room.players.push(player)
+        }else{
+            room.waitingPlayers.push(player)
+        }
+         
     }
     // return all players
         return res.status(201).json({

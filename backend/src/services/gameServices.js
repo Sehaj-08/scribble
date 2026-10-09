@@ -1,7 +1,7 @@
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD, DRAWER_LEFT} from "../config/constants.js"
 import { WebSocketServer , WebSocket } from "ws";
 import { rooms } from "../store/roomStore.js";
-
+import { CURRENT_STATE_SNAPSHOT } from "../config/constants.js";
 
 function finalScore(room){
  const finalScore = room.players.map(player => ({
@@ -299,14 +299,54 @@ function disconnection(playerId , room , roomId,socket){
     }
     
     player.socket = null;
+    player.lastStrokeId = 0;
     //this code will delete the player after 5 sec is disconnection
     setTimeout(() => {
         const index = room.players.indexOf(player)
         if(index !== -1 && player.socket === null){
             room.players.splice(index,1)
+            console.log("Player deleted from array to")
+        }
+        //automatic adding of waiting players to the room the moment a players leaves and gets deleted from the room array
+        if(room.players.length < 4){
+            if(room.waitingPlayers.length === 0 ){
+                console.log("No waiting players")
+                return 
+            } 
+        
+            const waitingPlayer = room.waitingPlayers[0]
+            console.log("Before waitingPlayer connection: ",waitingPlayer.socket)
+            if(waitingPlayer.socket && waitingPlayer.socket.readyState === WebSocket.OPEN){
+                console.log("waiting player is connected")
+                room.players.push(room.waitingPlayers[0])
+
+                const current_state = {
+                    type : CURRENT_STATE_SNAPSHOT.CURRENT_STATE_SNAPSHOT,
+                    state : room.state,
+                    currentRounds : room.currentRounds,
+                    drawerId: room.drawer?.playerId ?? null,
+                    // room_drawerId : room.drawer.playerId,
+                    timer : room.time,
+                
+                }
+                console.log("Before sending waitingPlayer joining msg to all ")
+                for(const players of room.players){
+                    if(players.socket && players.socket.readyState === WebSocket.OPEN && players.playerId !== waitingPlayer.playerId){
+                        console.log("Sending the fucking msg to all abt waitnplayer joining")
+                        players.socket.send(JSON.stringify({
+                            type : "player_joined",
+                            playerId : waitingPlayer.playerId
+                        }))
+                    }
+                }
+                waitingPlayer.socket.send(JSON.stringify(current_state))
+                console.log("New player joined the same game")
+                room.waitingPlayers.splice(0,1)
+            }
+            
         }
     }, 5000);
-    player.lastStrokeId = 0;
+    
     console.log("Player's data when he left" , player)
     console.log(`[BACKEND gameServices] player.socket set to null for Player=${playerId}`)
     //TRYING to write the logic for sending msg to all which playe left so what his id cna be removed from the UI
