@@ -4,7 +4,8 @@ export const GAME_STATES = {
   DRAWING: 'DRAWING',
   ROUND_ENDED: 'ROUND_ENDED',
   STARTING_NEW_ROUND: 'STARTING_NEW_ROUND',
-  GAME_OVER: 'GAME_OVER'
+  GAME_OVER: 'GAME_OVER',
+  ROOM_LOCKED: 'ROOM_LOCKED'
 }
 
 export const initialGameState = {
@@ -111,6 +112,15 @@ export function gameReducer(state, action) {
         chatMessages: [],
         timeLeft: 0
       }
+
+    case 'ROOM_LOCKED':
+      return {
+        ...state,
+        gameState: GAME_STATES.ROOM_LOCKED,
+        roomMessage:
+          payload?.message ??
+          'This room is full and the game has already started. Please join another room.',
+      };
 
     case 'CORRECT_GUESS':
       return {

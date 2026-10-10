@@ -16,13 +16,14 @@ function create_room(req,res){
     // create playes for that rooom
         rooms[roomId] = {
             players : [],
-            waitingPlayers: [],
+            // waitingPlayers: [],
             state : ROOM_STATES.waiting,
             strokes : [],
             totalRounds : 5 ,
             currentRounds : 0,
             alreadyMadeDrawers : [] ,
-            roomDeleteTimer: null
+            roomDeleteTimer: null,
+            roomLocked: false
         } 
 
         //here we can make first player join
@@ -34,6 +35,7 @@ function create_room(req,res){
             socket: null,
             hasGuessed: false,
             lastStrokeId: 0,
+            reconnectExpiresAt: null,
             score: 0
         })
     //return room id
@@ -45,6 +47,7 @@ function create_room(req,res){
 
 //VERY IMP AND GOOD LOGICAL improvements done in this function please see this 
 function join_room(req,res){
+    const MAX_PLAYERS = 4;
     // check if rooms exists 
         const {room_id} = req.params
         //Player id for reconnection  
@@ -67,9 +70,50 @@ function join_room(req,res){
                 return res.status(404).json({
                     message : "Player doesnt exist"
                 })
-            }
+                }
+                //CHECKING IF THE PLAYRE IS STILL WITHIN RECONNECTION TIMER 
+                // NO NEED FOR THS CHECK Y THE WAY 
+                //CAUSEIF PLAYER IS FOUND HE IS STILLNO DELERTED SO IS IN ROOM
+                // Allow reconnect only during the 5-second grace period
+            const reconnectAllowed =
+                player.socket === null &&
+                player.reconnectExpiresAt &&
+                Date.now() <= player.reconnectExpiresAt;
+                
+            if (!reconnectAllowed) {
+                return res.status(410).json({
+                message: "Reconnection period has expired"
+                });
+             }
+             
+             // Do not push this player into room.players again.
+        return res.status(200).json({
+            roomId: room_id,
+            playerId: player.playerId,
+            reconnect: true
+        });
+    
+
+            
         }else
+            
           {
+
+    // SECOND: This is a NEW player.
+    if (room.roomLocked || room.state !== ROOM_STATES.waiting) {
+        return res.status(409).json({
+            code: "ROOM_LOCKED",
+            message:
+                "This room is full and the game has already started. Please join another room."
+        });
+    }
+
+    if (room.players.length >= MAX_PLAYERS) {
+        return res.status(409).json({
+            code: "ROOM_FULL",
+            message: "This room already has four players."
+        });
+    }
             const playerId = Math.random().toString(36).substring(2, 10);
         
           
@@ -79,14 +123,16 @@ function join_room(req,res){
             hasGuessed: false,
             socket: null,
             lastStrokeId: 0,
+            reconnectExpiresAt: null,
             score: 0
         }
         if(room.players.length < 4){
             room.players.push(player)
-        }else{
-            room.waitingPlayers.push(player)
         }
-         
+        // else{
+        //     room.waitingPlayers.push(player)
+        // }
+        
     }
     // return all players
         return res.status(201).json({

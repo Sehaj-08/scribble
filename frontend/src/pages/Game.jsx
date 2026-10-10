@@ -19,6 +19,7 @@ function Game() {
     word,
     candidateWords,
     notification,
+    roomMessage,
     chatMessages,
     players // Optional: can be used to show scores
   } = globalState
@@ -63,6 +64,30 @@ function Game() {
 console.log('[GAME] gameState:', gameState)
 console.log('[GAME] notification:', notification)
 console.log('[GAME] drawerId:', drawerId)
+// Show a separate screen when the room is locked
+if (gameState === 'ROOM_LOCKED') {
+  return (
+    <div className="game-container">
+      <main className="game-arena">
+        <div className="state-panel">
+          <h2>🔒 Room is Full</h2>
+
+          <p>
+            {roomMessage ||
+              'This room is full and the game has already started. Please join another room.'}
+          </p>
+
+          <button
+            className="secondary-btn"
+            onClick={resetRoom}
+          >
+            ← Back to Home
+          </button>
+        </div>
+      </main>
+    </div>
+  )
+}
   return (
     <div className="game-container">
       {/* Temporary notification when drawer leaves*/}

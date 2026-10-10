@@ -5,7 +5,7 @@ import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGue
 import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
 //Do one correctlion think of applying rate limiting only on guess messages 
-const MAX_MESSAGES_PER_SECOND = 120
+const MAX_MESSAGES_PER_SECOND = 10000
 
 export function initWebSockets(server){
     const wss = new WebSocketServer({server})
@@ -28,16 +28,39 @@ export function initWebSockets(server){
         console.log("Chck1")
         const player = room.players.find(
             (player) => player.playerId === playerId
-        ) || room.waitingPlayers.find(
-            (player) => player.playerId === playerId
-        )
+        ) 
+        // || room.waitingPlayers.find(
+        //     (player) => player.playerId === playerId
+        // )
         console.log("Chck2")
+        //FIRST PRENEVTION -- this prevents players from entering if room is full
         if(!player){
             console.log(`[BACKEND socketManager] Connection #${socket.connId} closing (1008): Player doesn't belong to this room`)
             socket.close(1008 , "Player doesnt belongs to this room")
             return 
         }
-        
+//THIRD PREVENTION -- ALLOWS PLAYER TO RECONNECT THE ROOM
+// IMPT -- this will check if can is within time range to reconnect or not
+//the fact that deadline i.e player.reconnect... started tells player disconnecterd some time 
+//casue this playerreconn only triggeres when player disconnects not when new joined
+        const isValidReconnect =
+    player.socket === null &&
+    player.reconnectExpiresAt &&
+    Date.now() <= player.reconnectExpiresAt;
+    console.log("Status is reconnection valid: ", isValidReconnect)
+    //if this is false meaning either reconn tim gone or a new player trying to join whioch not alloews 
+    //if th9is is not false that is its true then  
+    
+    //SECOND PREVENTION -- if a new player tries to join a ongoing game with vacant seat (someon left) then ths code will stop casue room was locked the moment game started
+    console.log("#$#$#$#$#$#$")
+    if(room.roomLocked && !isValidReconnect){
+            console.log("Room is locked no one can enter")
+            socket.send(JSON.stringify({
+                type : ROOM_STATES.room_locked,
+                message: 'laadfle, This room is full and the game has already started. Please join another room.'
+            }))
+            return 
+        }
         // Close stale socket before assigning the new one to prevent disconnecting the new connection
         if(player.socket && player.socket.readyState === WebSocket.OPEN){
             console.log(`[BACKEND socketManager] Player reconnecting. Closing stale socket. Room=${roomId}, Player=${playerId}`)
@@ -47,7 +70,9 @@ export function initWebSockets(server){
         console.log("Chck3")
         // player.score = 0
         player.socket = socket
+      
         
+        //THIRD PREVENTION --   LETTING ONLY RECONNECTION WALE PLAYERS TO REJOIN 
         //If roomDeleteTimre is already running stop it casue new player joined 
         if(room.roomDeleteTimer){
             clearTimeout(room.roomDeleteTimer)
@@ -56,17 +81,20 @@ export function initWebSockets(server){
         
         console.log(`[BACKEND socketManager] Player ${playerId} socket set to Connection #${socket.connId} in room ${roomId}`)
         // Sending new player joined message
+        console.log("#$#$#$#$#$#$#$#$#$#$#$#" , room.players.length)
+        if(room.players.length <=4){
         for (const player of room.players){
             console.log("Sending player jonied message to all")
             if(player.playerId !== playerId){
             if(player.socket && player.socket.readyState === WebSocket.OPEN){
                 player.socket.send(JSON.stringify({
-                    type : "player_joined",
+                    type : "player_joined", // this type is responsible for telling frontend who has entered which will the recerve the current game status 
                     playerId : playerId
                 }))
             }
             }
         }
+    }
         //HEY GPT is this correct way of sending list of already connecred player to recently joined player 
         //Sending the currently joined player list of all the connected players 
         const connectedPlayersToSend = room.players.filter(
@@ -100,9 +128,10 @@ export function initWebSockets(server){
             disconnection(playerId,room,roomId,socket)
         })
         //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
-        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length <=4 && !room.waitingPlayers.includes(player)){
+        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length === 4){
             if(room.state === ROOM_STATES.waiting){
-            startRound(room ,player)
+                room.roomLocked = true;
+                startRound(room ,player)
         }else{
             console.log(room.state)
             const current_state = {

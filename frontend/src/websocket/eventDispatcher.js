@@ -65,6 +65,18 @@ function handleRoundEnded(message, dispatch) {
     dispatch(action)
 }
 
+function handleRoomLocked(message, dispatch) {
+  const action = {
+    type: 'ROOM_LOCKED',
+    payload: {
+      message: message.message,
+    },
+  };
+
+  console.log('[HANDLER] Dispatching:', action);
+  dispatch(action);
+}
+
 function handleCorrectGuess(message, dispatch) {
     const action = { type: 'CORRECT_GUESS', payload: { playerId: message.player } }
     console.log("[HANDLER] Dispatching:", action)
@@ -196,6 +208,9 @@ export function createEventDispatcher(dispatch, playerId) {
                 case 'ROUND_ENDED': 
                     console.log("[DISPATCHER] Routing → ROUND_ENDED")
                     return handleRoundEnded(message, dispatch)
+                case 'ROOM_LOCKED': 
+                    console.log("[DISPATCHER] Routing → ROOM_LOCKED")
+                    return handleRoomLocked(message, dispatch)
                 default:
                     console.warn("[WebSocket Dispatcher] Unknown event type:", message.type, message)
                     return

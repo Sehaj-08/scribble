@@ -15,6 +15,7 @@ function startRound(room){
     //ROUND START LOGIC
     if(room.currentRounds >= room.totalRounds){
         console.log("Game gas ended")
+        room.roomLocked = false
         // let finalScores = finalScores(room)
         room.alreadyMadeDrawers.length = 0
         room.state = ROOM_STATES.game_over
@@ -36,7 +37,7 @@ function startRound(room){
     
         const playersCount = connectedPlayers.length
                // 
-        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) && playersCount >= 2){
+        if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) ){
             //ROUND STARTS
             console.log("Round started")
             room.strokes.length = 0
@@ -243,6 +244,7 @@ function timer(room,playerId){
             }else{
                 console.log("Timer Ended, Game has fuckign ended you fuckign little bitch!!!")
                 room.state = ROOM_STATES.game_over
+                room.roomLocked = false
                 //Broadacasting score
                 for(const players of room.players){
                 if(players.socket && players.socket.readyState === WebSocket.OPEN){
@@ -299,6 +301,7 @@ function disconnection(playerId , room , roomId,socket){
     }
     
     player.socket = null;
+    player.reconnectExpiresAt = Date.now() + 5000;
     player.lastStrokeId = 0;
     //this code will delete the player after 5 sec is disconnection
     setTimeout(() => {
@@ -307,44 +310,45 @@ function disconnection(playerId , room , roomId,socket){
             room.players.splice(index,1)
             console.log("Player deleted from array to")
         }
+        //Commenting waiting player concept for now 
         //automatic adding of waiting players to the room the moment a players leaves and gets deleted from the room array
-        if(room.players.length < 4){
-            if(room.waitingPlayers.length === 0 ){
-                console.log("No waiting players")
-                return 
-            } 
+        // if(room.players.length < 4){
+        //     if(room.waitingPlayers.length === 0 ){
+        //         console.log("No waiting players")
+        //         return 
+        //     } 
         
-            const waitingPlayer = room.waitingPlayers[0]
-            console.log("Before waitingPlayer connection: ",waitingPlayer.socket)
-            if(waitingPlayer.socket && waitingPlayer.socket.readyState === WebSocket.OPEN){
-                console.log("waiting player is connected")
-                room.players.push(room.waitingPlayers[0])
+        //     const waitingPlayer = room.waitingPlayers[0]
+        //     console.log("Before waitingPlayer connection: ",waitingPlayer.socket)
+        //     if(waitingPlayer.socket && waitingPlayer.socket.readyState === WebSocket.OPEN){
+        //         console.log("waiting player is connected")
+        //         room.players.push(room.waitingPlayers[0])
 
-                const current_state = {
-                    type : CURRENT_STATE_SNAPSHOT.CURRENT_STATE_SNAPSHOT,
-                    state : room.state,
-                    currentRounds : room.currentRounds,
-                    drawerId: room.drawer?.playerId ?? null,
-                    // room_drawerId : room.drawer.playerId,
-                    timer : room.time,
+        //         const current_state = {
+        //             type : CURRENT_STATE_SNAPSHOT.CURRENT_STATE_SNAPSHOT,
+        //             state : room.state,
+        //             currentRounds : room.currentRounds,
+        //             drawerId: room.drawer?.playerId ?? null,
+        //             // room_drawerId : room.drawer.playerId,
+        //             timer : room.time,
                 
-                }
-                console.log("Before sending waitingPlayer joining msg to all ")
-                for(const players of room.players){
-                    if(players.socket && players.socket.readyState === WebSocket.OPEN && players.playerId !== waitingPlayer.playerId){
-                        console.log("Sending the fucking msg to all abt waitnplayer joining")
-                        players.socket.send(JSON.stringify({
-                            type : "player_joined",
-                            playerId : waitingPlayer.playerId
-                        }))
-                    }
-                }
-                waitingPlayer.socket.send(JSON.stringify(current_state))
-                console.log("New player joined the same game")
-                room.waitingPlayers.splice(0,1)
-            }
+        //         }
+        //         console.log("Before sending waitingPlayer joining msg to all ")
+        //         for(const players of room.players){
+        //             if(players.socket && players.socket.readyState === WebSocket.OPEN && players.playerId !== waitingPlayer.playerId){
+        //                 console.log("Sending the fucking msg to all abt waitnplayer joining")
+        //                 players.socket.send(JSON.stringify({
+        //                     type : "player_joined",
+        //                     playerId : waitingPlayer.playerId
+        //                 }))
+        //             }
+        //         }
+        //         waitingPlayer.socket.send(JSON.stringify(current_state))
+        //         console.log("New player joined the same game")
+        //         room.waitingPlayers.splice(0,1)
+        //     }
             
-        }
+        // }
     }, 5000);
     
     console.log("Player's data when he left" , player)
@@ -425,6 +429,8 @@ function disconnection(playerId , room , roomId,socket){
                                 }else{
                         console.log("Game has fuckign ended you fuckign little bitch!!!")
                         //Broadcasting Score
+                        room.state = ROOM_STATES.game_over
+                        room.roomLocked= false 
                         for(const players of room.players){
                             if(players.socket && players.socket.readyState === WebSocket.OPEN){
                                 players.socket.send(JSON.stringify({
@@ -442,6 +448,7 @@ function disconnection(playerId , room , roomId,socket){
         )
         if(recalculatingConnectedPlayers.length === 0){
             console.log(`[BACKEND gameServices] 0 players left in room=${roomId}, starting grace period timer`)
+            room.roomLocked = false;
             if(!room.roomDeleteTimer){
                 room.roomDeleteTimer = setTimeout(() => {
                     const currentRoom = rooms[roomId]
@@ -791,15 +798,17 @@ function checkWord(room , playerId,drawer , message){
 //CRITICAL BUG 06 HERE I THIING WE SHOULD CHANGE THE STATE OF THE ROOM FROM CHOOSING WORD TO DRAWING AND THEN CHECK IN GUESS WORD IF ROOM IS IN DRAWEING STATE 
 //Changin the state to drawing which act as a valiator to check if client is alowed to guess or not                 
 room.state = ROOM_STATES.drawing
-                for(const player of room.players){
+
+                for(const player of room.players.slice(0,4)){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
                         // if(player.playerId !== playerId){
                             player.socket.send(JSON.stringify({
-                            message : "Game has fucking started"
+                            message : "Game has fucking started",
+                            wordLength : room.word.length
                         }))
                 }
               console.log("Word choosen")  
-            }
+                }
                 
 }
 export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord }
