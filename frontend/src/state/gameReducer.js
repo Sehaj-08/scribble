@@ -18,7 +18,9 @@ export const initialGameState = {
   candidateWords: [],    // Words the drawer can choose from
   word: '',              // The word revealed at the end of a round
   chatMessages: [],      // Array of { senderId, text, type }
-  notification: null     // Drawer left + if wait or start next round 
+  notification: null,     // Drawer left + if wait or start next round
+  word: '',
+  wordLength: 0, 
 }
 
 export function gameReducer(state, action) {
@@ -121,6 +123,18 @@ export function gameReducer(state, action) {
           payload?.message ??
           'This room is full and the game has already started. Please join another room.',
       };
+
+    case 'ROOM_WORD':
+    return {
+        ...state,
+        word: payload.word
+    };
+
+    case 'ROOM_WORD_LENGTH':
+        return {
+            ...state,
+            wordLength: payload.wordLength
+        };
 
     case 'CORRECT_GUESS':
       return {

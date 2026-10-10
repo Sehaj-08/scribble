@@ -34,7 +34,16 @@ function startRound(room){
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
         )
-    
+    if (connectedPlayers.length < 2) {
+    console.log(
+        `[BACKEND] Cannot start round: only ${connectedPlayers.length} connected player(s)`
+    );
+
+    room.drawer = null;
+    room.state = ROOM_STATES.waiting;
+
+    return;
+}
         const playersCount = connectedPlayers.length
                // 
         if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) ){
@@ -666,6 +675,10 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                            
                         }
                     }
+                    player.socket.send(JSON.stringify({
+                        type: 'room_word',
+                        word: room.word
+                    }))
 
                     //check whether everyone has guessed correctly or not
                     let allguesses = true
@@ -730,7 +743,10 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                                 if(playersLeft.length > 1){
                                     console.log("Rounds remain and players enough so start next round")
                                     room.state = ROOM_STATES.starting_new_round
-                                    startRound(room)
+                                    setTimeout(() => {
+                                        startRound(room)    
+                                    }, 3000);
+                                    
                                 }
                             }else{
                                 console.log("Game has fuckign ended you fuckign little bitch!!!")
@@ -801,10 +817,19 @@ room.state = ROOM_STATES.drawing
 
                 for(const player of room.players.slice(0,4)){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
-                        // if(player.playerId !== playerId){
+                            if(player.playerId === drawer.playerId){
+                                player.socket.send(JSON.stringify({
+                                    type: "room_word",
+                                    word: room.word
+                                }))
+                            }else{
+                                player.socket.send(JSON.stringify({
+                                    type: "room_word_length",
+                                    wordLength : room.word.length
+                                }))
+                            }
                             player.socket.send(JSON.stringify({
                             message : "Game has fucking started",
-                            wordLength : room.word.length
                         }))
                 }
               console.log("Word choosen")  

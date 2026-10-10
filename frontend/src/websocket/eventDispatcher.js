@@ -104,6 +104,25 @@ function handleWaiting(message, dispatch) {
 
 
 
+function handleRoomWord(message , dispatch){
+    console.log("[WebSocket Dispatcher] ROOM WORD FOR DRAWER.")
+    const action = {type: 'ROOM_WORD',
+        payload: { word: message.word }
+}
+    console.log("[HANDLER] Dispatching:", action)
+    dispatch(action)
+}
+
+function handleRoomWordLength(message , dispatch){
+    console.log("[WebSocket Dispatcher] ROOM WORD LENGTH FOR PLAYERS.")
+    const action = {type: 'ROOM_WORD_LENGTH',
+        payload: { wordLength: message.wordLength }
+    }
+    console.log("[HANDLER] Dispatching:", action)
+    dispatch(action)
+}
+
+
 function handleDrawerLeftWaiting(message, dispatch) {
     console.log("[BHADWE WebSocket Dispatcher] Drawer Left lon da boccho.")
     const action = { type: 'DRAWER_LEFT_WAITING'}
@@ -211,6 +230,12 @@ export function createEventDispatcher(dispatch, playerId) {
                 case 'ROOM_LOCKED': 
                     console.log("[DISPATCHER] Routing → ROOM_LOCKED")
                     return handleRoomLocked(message, dispatch)
+                case 'room_word':
+                    console.log("[DISPATCHER] Routing → ROOM_WORD")
+                    return handleRoomWord(message, dispatch)
+                case 'room_word_length':
+                    console.log("[DISPATCHER] Routing → ROOM_WORD_LENGTH")
+                    return handleRoomWordLength(message, dispatch)
                 default:
                     console.warn("[WebSocket Dispatcher] Unknown event type:", message.type, message)
                     return

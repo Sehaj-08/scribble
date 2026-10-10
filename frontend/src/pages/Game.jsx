@@ -17,6 +17,7 @@ function Game() {
     drawerId,
     gameState,
     word,
+    wordLength,
     candidateWords,
     notification,
     roomMessage,
@@ -168,7 +169,35 @@ if (gameState === 'ROOM_LOCKED') {
         {/* State: DRAWING */}
         {gameState === 'DRAWING' && (
           <div className="state-panel active-round">
-            <Canvas isDrawer={isDrawer} />
+            {/* for displaying blanks to players */}
+            {/* Show actual word to drawer, blanks to guessers */}
+{isDrawer || hasGuessed ?  (
+  <div className="word-hint">
+    <h3>Your word: {word || 'Loading...'}</h3>
+  </div>
+) : wordLength > 0 ? (
+  <div className="word-hint">
+    <h3>GUESS THIS</h3>
+
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '8px',
+        fontSize: '1.5rem',
+        fontWeight: 'bold',
+        marginBottom: '1rem'
+      }}
+    >
+      {Array.from({ length: wordLength }, (_, index) => (
+        <span key={index}>_</span>
+      ))}
+    </div>
+  </div>
+) : null}
+
+<Canvas isDrawer={isDrawer} />
+            
             
             {/* Phase 2.5: Guessing controls for non-drawers */}
             {!isDrawer && ( 
