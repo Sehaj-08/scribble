@@ -49,6 +49,8 @@ function startRound(room){
         if((room.state === ROOM_STATES.waiting || room.state === ROOM_STATES.starting_new_round) ){
             //ROUND STARTS
             console.log("Round started")
+            room.strokes = [];
+            console.log("ROOM STEOKS SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS",room.strokes.length)
             room.strokes.length = 0
             room.currentRounds += 1
 
@@ -247,8 +249,11 @@ function timer(room,playerId){
                 }
                 if(playersLeft.length > 1){
                     console.log("Rounds remain and players enough so start next round")
-                    room.state = ROOM_STATES.starting_new_round
-                    startRound(room)
+                    console.log("ROOM STEOKS BBBBBBBBBBBBBSSSSSSSSSSSSSSSSSSSSSSSSSS",room.strokes.length)
+                    scheduleRoomTimeout(room, () => {
+                            room.state = ROOM_STATES.starting_new_round;
+                            startRound(room);
+                        }, 3000);
                 }
             }else{
                 console.log("Timer Ended, Game has fuckign ended you fuckign little bitch!!!")
@@ -313,12 +318,22 @@ function disconnection(playerId , room , roomId,socket){
     player.reconnectExpiresAt = Date.now() + 5000;
     player.lastStrokeId = 0;
     //this code will delete the player after 5 sec is disconnection
-    setTimeout(() => {
-        const index = room.players.indexOf(player)
-        if(index !== -1 && player.socket === null){
-            room.players.splice(index,1)
-            console.log("Player deleted from array to")
-        }
+    
+    scheduleRoomTimeout(room, () => {
+        const index = room.players.indexOf(player);
+
+        if (index !== -1 && player.socket === null) {
+         room.players.splice(index, 1);
+         console.log("Player deleted from array");
+     }
+
+
+    // setTimeout(() => {
+    //     const index = room.players.indexOf(player)
+    //     if(index !== -1 && player.socket === null){
+    //         room.players.splice(index,1)
+    //         console.log("Player deleted from array to")
+    //     }
         //Commenting waiting player concept for now 
         //automatic adding of waiting players to the room the moment a players leaves and gets deleted from the room array
         // if(room.players.length < 4){
@@ -355,9 +370,10 @@ function disconnection(playerId , room , roomId,socket){
         //         waitingPlayer.socket.send(JSON.stringify(current_state))
         //         console.log("New player joined the same game")
         //         room.waitingPlayers.splice(0,1)
-        //     }
+        //     } 
             
         // }
+    // }, 5000);
     }, 5000);
     
     console.log("Player's data when he left" , player)
@@ -383,12 +399,12 @@ function disconnection(playerId , room , roomId,socket){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
                 console.log("drawer left bro")
-                room.state = DRAWER_LEFT.DRAWER_LEFT
+                room.state = DRAWER_LEFT.drawer_left
                 
                 for(const players of room.players){
                     if(players.socket && players.socket.readyState === WebSocket.OPEN){
                         players.socket.send(JSON.stringify({
-                            type : DRAWER_LEFT.DRAWER_LEFT
+                            type : DRAWER_LEFT.DRAWER_LEFT_NEW_ROUND
                             // msg : "Drawer humara kayar tha leave krr gya bitch!!!"
                         }))
                     }
@@ -422,19 +438,26 @@ function disconnection(playerId , room , roomId,socket){
                                     }))
                                 }
                                 // delay of 3 sec before starting new round 
-                                setTimeout(() => {
-                                        room.state = ROOM_STATES.starting_new_round
-                                        startRound(room)
-                                        // for(const players of playersLeft){
-                                        //     if(players.socket && players.socket.readyState === WebSocket.OPEN){
-                                        //         players.socket.send(JSON.stringify({
-                                        //             type : ROOM_STATES.starting_new_round,
-                                        //             round : room.currentRounds
-                                        //         }))
-                                        //     }
-                                        // }
+                                // setTimeout(() => {
+                                //         room.state = ROOM_STATES.starting_new_round
+                                //         startRound(room)
+                                //         // for(const players of playersLeft){
+                                //         //     if(players.socket && players.socket.readyState === WebSocket.OPEN){
+                                //         //         players.socket.send(JSON.stringify({
+                                //         //             type : ROOM_STATES.starting_new_round,
+                                //         //             round : room.currentRounds
+                                //         //         }))
+                                //         //     }
+                                //         // }
                                         
-                                    }, 3000)                        }
+                                //     }, 3000) 
+                                    console.log("ROOM STEOKS BBBBBBBBBBBBBSSSSSSSSSSSSSSSSSSSSSSSSSS",room.strokes.length)
+                                    scheduleRoomTimeout(room, () => {
+                                        room.state = ROOM_STATES.starting_new_round;
+                                        startRound(room);
+                                    }, 3000);
+                      
+                                 }
                                 }else{
                         console.log("Game has fuckign ended you fuckign little bitch!!!")
                         //Broadcasting Score
@@ -443,8 +466,8 @@ function disconnection(playerId , room , roomId,socket){
                         for(const players of room.players){
                             if(players.socket && players.socket.readyState === WebSocket.OPEN){
                                 players.socket.send(JSON.stringify({
-                                    type : "Players score",
-                                    score : players.score
+                                    type : ROOM_STATES.game_over,
+                                    score : finalScore(room)
                      }))
             }
         }
@@ -458,6 +481,10 @@ function disconnection(playerId , room , roomId,socket){
         if(recalculatingConnectedPlayers.length === 0){
             console.log(`[BACKEND gameServices] 0 players left in room=${roomId}, starting grace period timer`)
             room.roomLocked = false;
+            if (room.shuttingDown) {
+    console.log("[SHUTDOWN] Skipping room deletion timer");
+    return;
+}
             if(!room.roomDeleteTimer){
                 room.roomDeleteTimer = setTimeout(() => {
                     const currentRoom = rooms[roomId]
@@ -473,9 +500,10 @@ function disconnection(playerId , room , roomId,socket){
                         if (currentRoom.timer) {
                             clearInterval(currentRoom.timer)
                         }
+                        currentRoom.roomDeleteTimer = null//first null the time then delete the fucking room man
                         delete rooms[roomId]
                     }
-                    currentRoom.roomDeleteTimer = null
+                    
                 }, 5000);
             }
             return ;     
@@ -642,6 +670,7 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                     //ONLY ALLOW GUESS WORDS AFTER DRAWER HAS SELECTED THE MAIN WORD
                     if(room.state !== ROOM_STATES.drawing){
                         console.log("Room's not allowing drawing yet so stop fucking guess you stupid little fagot!!!")
+                        return
                     }
                 // 
                 if(!message.text || drawerId === playerId){
@@ -728,7 +757,7 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                             }
                         }
                         clearInterval(room.timer)
-                        
+                        room.timer = null
                         //Logic responsible for starting next round or ending the game
 
                         if(room.currentRounds < room.totalRounds){
@@ -742,10 +771,17 @@ function checkGuess(data , room, playerId ,drawerId  ,message){
                                 }
                                 if(playersLeft.length > 1){
                                     console.log("Rounds remain and players enough so start next round")
-                                    room.state = ROOM_STATES.starting_new_round
-                                    setTimeout(() => {
-                                        startRound(room)    
+                                    // room.state = ROOM_STATES.starting_new_round
+                                    // setTimeout(() => {
+                                    //     startRound(room)    
+                                    // }, 3000);
+                                    console.log("ROOM STEOKS BBBBBBBBBBBBBSSSSSSSSSSSSSSSSSSSSSSSSSS",room.strokes.length)
+                                    //added for graceful shutdown 
+                                    scheduleRoomTimeout(room, () => {
+                                    room.state = ROOM_STATES.starting_new_round;
+                                    startRound(room);
                                     }, 3000);
+
                                     
                                 }
                             }else{
@@ -836,7 +872,56 @@ room.state = ROOM_STATES.drawing
                 }
                 
 }
-export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord }
+
+
+function cleanupRoomTimers() {
+    for (const room of Object.values(rooms)) {
+        // Prevent scheduled callbacks from starting game logic
+        room.shuttingDown = true;
+
+        if (room.timer) {
+            clearInterval(room.timer);
+            room.timer = null;
+        }
+
+        if (room.roomDeleteTimer) {
+            clearTimeout(room.roomDeleteTimer);
+            room.roomDeleteTimer = null;
+        }
+
+        if (room.pendingTimeouts) {
+            for (const timeoutId of room.pendingTimeouts) {
+                clearTimeout(timeoutId);
+            }
+
+            room.pendingTimeouts.clear();
+        }
+    }
+
+    console.log("[SHUTDOWN] All room timers cleared");
+}
+
+// for ending the async timeouts after they are completed 
+function scheduleRoomTimeout(room, callback, delay) {
+    if (!room.pendingTimeouts) {
+        room.pendingTimeouts = new Set();
+    }
+
+    const timeoutId = setTimeout(() => {
+        room.pendingTimeouts.delete(timeoutId);
+
+        // Don't start game logic while shutting down
+        if (room.shuttingDown) return;
+
+        callback();
+    }, delay);
+
+    room.pendingTimeouts.add(timeoutId);
+    return timeoutId;
+}
+
+export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord, cleanupRoomTimers }
+
 
 
 //what we want to implement 

@@ -19,7 +19,6 @@ export const initialGameState = {
   word: '',              // The word revealed at the end of a round
   chatMessages: [],      // Array of { senderId, text, type }
   notification: null,     // Drawer left + if wait or start next round
-  word: '',
   wordLength: 0, 
 }
 
@@ -207,11 +206,7 @@ export function gameReducer(state, action) {
 
     case 'RESET_GAME':
       return initialGameState
-
-    default:
-      return state
-
-    case 'CURRENT_STATE_SNAPSHOT':
+      case 'CURRENT_STATE_SNAPSHOT':
       return {
     ...state,
     gameState: payload.state,
@@ -219,5 +214,10 @@ export function gameReducer(state, action) {
     drawerId: payload.drawerId,
     timeLeft: payload.timer
   }
-  }
+  
+
+    default:
+      return state
+
+}
 }

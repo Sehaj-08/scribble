@@ -129,6 +129,13 @@ if (canvas.height !== 600) canvas.height = 600;
     ctx.closePath();
   };
 
+  useEffect(() => {
+  console.log("🟢 CANVAS MOUNTED");
+
+  return () => {
+    console.log("🔴 CANVAS UNMOUNTED");
+  };
+}, []);
   return (
     <div 
       ref={containerRef}

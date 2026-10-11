@@ -23,7 +23,11 @@ function create_room(req,res){
             currentRounds : 0,
             alreadyMadeDrawers : [] ,
             roomDeleteTimer: null,
-            roomLocked: false
+            roomLocked: false,
+
+            // Graceful shutdown properties
+            pendingTimeouts: new Set(),
+            shuttingDown: false
         } 
 
         //here we can make first player join

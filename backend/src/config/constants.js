@@ -6,7 +6,8 @@ const ROOM_STATES = {
     choosing_words : "CHOOSING_WORD"    ,
     starting_new_round : "STARTING_NEW_ROUND",
     game_over: "GAME_OVER",
-    room_locked: "ROOM_LOCKED"
+    room_locked: "ROOM_LOCKED",
+    drawer_left: "DRAWER_LEFT"
     // clear_chat : "CLEAR_CHAT"
 }
 

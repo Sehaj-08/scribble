@@ -69,6 +69,7 @@ function Home() {
     // Client-side validation for empty room code
     if (!trimmedId) {
       setErrorMessage('Please enter a valid Room ID to join.')
+      isActionLocked.current = false   // unlocks the lock which earlier was used for stopping user for clicking a button multiple times
       return
     }
 

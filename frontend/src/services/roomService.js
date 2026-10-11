@@ -15,7 +15,7 @@ const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VIT
 export async function createRoom() {
   try {
     const response = await fetch(`${API_BASE_URL}/api/rooms/rooms`, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
       },

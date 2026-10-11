@@ -1,14 +1,61 @@
-import {WebSocketServer , WebSocket} from "ws"
+    import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNAPSHOT} from "../config/constants.js"
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
 import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
-//Do one correctlion think of applying rate limiting only on guess messages 
-const MAX_MESSAGES_PER_SECOND = 10000
+
+//adding func below for applyrate limiting mesdsage specific 
+
+const RATE_LIMITS = {
+    [STROKE_EVENTS.POINT]: { perSecond: 200, burst: 180 },
+    [GUESS_EVENTS.GUESS]: { perSecond: 5, burst: 5 },
+    [CHOOSE_WORD.WORD]: { perSecond: 3, burst: 3 },
+    default: { perSecond: 20, burst: 30 }
+};
+
+function isRateLimited(socket, messageType) {
+    const limit = RATE_LIMITS[messageType] ?? RATE_LIMITS.default;
+    const now = Date.now();
+
+    if (!socket.rateLimitBuckets) {
+        socket.rateLimitBuckets = new Map();
+    }
+
+    let bucket = socket.rateLimitBuckets.get(messageType);
+
+    if (!bucket) {
+        bucket = {
+            tokens: limit.burst,
+            lastRefill: now
+        };
+
+        socket.rateLimitBuckets.set(messageType, bucket);
+    }
+
+    const elapsedSeconds = (now - bucket.lastRefill) / 1000;
+
+    bucket.tokens = Math.min(
+        limit.burst,
+        bucket.tokens + elapsedSeconds * limit.perSecond
+    );
+
+    bucket.lastRefill = now;
+
+    if (bucket.tokens < 1) {
+        return true;
+    }
+
+    bucket.tokens -= 1;
+    return false;
+}
+
 
 export function initWebSockets(server){
-    const wss = new WebSocketServer({server})
+    const wss = new WebSocketServer({
+        server,
+        maxPayload: 1024 //  Maximum incoming message size: 1 KiB
+    })
     wss.on("connection" , (socket,request)=> {
         backendConnCounter++;
         socket.connId = backendConnCounter;
@@ -115,8 +162,7 @@ export function initWebSockets(server){
         //     console.log("Hey you lill fuck!!" , player)
         // })
         //2+ Players then start the game
-        let messageCount = 0
-        let windowStart = Date.now()
+       
         //Disconnection logic 
         console.log("See if syncStrokes is gettign triggered")
         syncStrokes(room , player)
@@ -151,28 +197,44 @@ export function initWebSockets(server){
         }
 
         socket.on("message", (data) =>{
-            //applying ratte limiting 
-            const now = Date.now()
-
-    if (now - windowStart >= 1000) {
-        messageCount = 0
-        windowStart = now
+            let message;
+            
+    try{
+            const rawmessage = data.toString()
+            message = JSON.parse(rawmessage)  // DECLARING MSG INSIDE {} ONLY MAKES IT ACCESSIBLE ONLY INSDE THIS BLOCK WE CANT ACCESS IT OUTISDE 
+    }catch(error){
+        
+        console.warn(
+             `[BACKEND] Invalid JSON received from Player=${playerId}`
+        );
+        socket.close(1007, "Invalid JSON message");
+        return;
+    }
+        
+     // NEW: Per-message-type rate limiting
+    if (isRateLimited(socket, message.type)) {
+        console.log(
+            `[RATE LIMIT] Player=${playerId}, type=${message.type}`
+        );
+        return;
     }
 
-    if (messageCount >= MAX_MESSAGES_PER_SECOND) {
-        console.log(`Rate limit exceeded for player ${playerId}`)
-        return
-    }
-
-    messageCount++
-            const message =  JSON.parse(data)
             const result = validator(message)
+            console.log(data)
+            console.log(result)
             if(!result.valid){
                 console.log("message didnt pass the validation")
                 return
             }
-            
+            if(( message.type===STROKE_EVENTS.POINT || message.type === GUESS_EVENTS.GUESS || message.type === CHOOSE_WORD.WORD)
+                && 
+                !room.drawer?.playerId){
+                console.log("No drawer selected")
+                return;
+            }
+
             if(message.type===STROKE_EVENTS.POINT){
+                
                 if(room.state === ROOM_STATES.drawing){ //check if this condition is even needed or fucking not !!!!
                 console.log("Stroke message arrived")
                                   
@@ -184,6 +246,7 @@ export function initWebSockets(server){
             }
             if(message.type === CHOOSE_WORD.WORD){
                 console.log("check Word function has been started or we can say initiated")
+                room.state = ROOM_STATES.choosing_words
                 checkWord(room,playerId ,room.drawer ,message)
             }
             })
@@ -195,7 +258,7 @@ export function initWebSockets(server){
     // others see the timer and msg that game has stated
     })
     
-
+    return wss; // LETTING SERVER CLOSES GRACEFULLY SO NEXT TIME IT CAN RESTADRT PREPERLY 
 
  }
 
