@@ -1,7 +1,7 @@
     import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNAPSHOT} from "../config/constants.js"
-import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord} from "../services/gameServices.js" 
+import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord, scheduleRoomTimeout} from "../services/gameServices.js" 
 import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
 
@@ -124,6 +124,42 @@ export function initWebSockets(server){
         if(room.roomDeleteTimer){
             clearTimeout(room.roomDeleteTimer)
             room.roomDeleteTimer = null
+           
+           //cal connected players 
+           const connectedPlayers = room.players.filter(
+            (player) => player.socket && player.socket.readyState === WebSocket.OPEN
+           )
+           //check if connplayers >=2 and is roomstate = waiting
+           if(connectedPlayers.length >= 2){
+                if(room.currentRounds < room.totalRounds){
+                    scheduleRoomTimeout(room , () => {
+                        const currentRoom = rooms[roomId]
+                        if(!currentRoom){
+                            console.log("Room doesnt exist man")
+                        }
+                        const activePlayers = room.players.filter(
+                            (player) => player.socket && player.socket.readyState === WebSocket.OPEN
+                        )
+                        if(activePlayers.length < 2){
+                            console.log("Room deleting player joined still not enogh pllayers")
+                            return 
+                        }
+                        if(currentRoom.shuttingDown){
+                            console.log("Room has to go due to graceshutdown")
+                            return
+                        }
+                        currentRoom.state = ROOM_STATES.starting_new_round
+                        startRound(currentRoom)
+                    },1000)
+                }else{
+                    console.log("Game has ended you little piece of shit")
+                    room.state = ROOM_STATES.game_over
+                }
+           } 
+           //check if rounds remain 
+           //if rounds left wrtie a timeout running afte 1 sec 
+           //when timeout activate again check if room exists , conn players present ,, room.shuttingdown?? 
+           //then start the fuckign round man            
         }
         
         console.log(`[BACKEND socketManager] Player ${playerId} socket set to Connection #${socket.connId} in room ${roomId}`)
@@ -174,8 +210,8 @@ export function initWebSockets(server){
             disconnection(playerId,room,roomId,socket)
         })
         //VERY HUGE BUG SOLVED lines 66-72  (See notion for solution Task 6 soln)
-        if(player.socket && player.socket.readyState === WebSocket.OPEN && room.players.length === 4){
-            if(room.state === ROOM_STATES.waiting){
+        if(player.socket && player.socket.readyState === WebSocket.OPEN){
+            if(room.state === ROOM_STATES.waiting && room.players.length === 4){
                 room.roomLocked = true;
                 startRound(room ,player)
         }else{

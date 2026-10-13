@@ -478,54 +478,74 @@ function disconnection(playerId , room , roomId,socket){
             (player) => player.socket && 
                         player.socket.readyState === WebSocket.OPEN
         )
-        if(recalculatingConnectedPlayers.length === 0){
+        if(recalculatingConnectedPlayers.length < 2){
             console.log(`[BACKEND gameServices] 0 players left in room=${roomId}, starting grace period timer`)
             room.roomLocked = false;
+            clearInterval(room.timer)
+            room.timer = null
+            room.state = ROOM_STATES.waiting
+            //grace shutdown when ran romo.shuttingDown becomes true s
             if (room.shuttingDown) {
     console.log("[SHUTDOWN] Skipping room deletion timer");
     return;
-}
-            if(!room.roomDeleteTimer){
-                room.roomDeleteTimer = setTimeout(() => {
-                    const currentRoom = rooms[roomId]
-                    if (!currentRoom) return; // Already deleted
-
-                    const currentlyConnectedPlayers = currentRoom.players.filter(
-                        (player) => player.socket &&
-                                    player.socket.readyState === WebSocket.OPEN
-                    )                  
-
-                    if(currentlyConnectedPlayers.length === 0){
-                        console.log(`[BACKEND gameServices] Grace period ended. Deleting room=${roomId}`)
-                        if (currentRoom.timer) {
-                            clearInterval(currentRoom.timer)
-                        }
-                        currentRoom.roomDeleteTimer = null//first null the time then delete the fucking room man
-                        delete rooms[roomId]
-                    }
-                    
-                }, 5000);
-            }
-            return ;     
-        }
-            if(recalculatingConnectedPlayers.length === 1){
-                //CRITICAL BUG 05 SOLVED HERE
-                //When waiting for other players -- waiting for round to start yet -- so timer should not be running in waiting state
-                clearInterval(room.timer)
-                room.timer = null
-                console.log(room.timer)
-                room.state = ROOM_STATES.waiting;
-                for(const player of room.players){
+}           
+        if(recalculatingConnectedPlayers.length === 1){
+            //here we an start the timer visible to the playes if any in the room 
+            for(const player of room.players){
                     if(player.socket && player.socket.readyState === WebSocket.OPEN){
                         player.socket.send(JSON.stringify({
                             message : "Waiting for players to fucking join"
                         }))
                     }   
                 }
-            }
-            // if(recalculatingConnectedPlayers.length > 1){
+        }
+            if(!room.roomDeleteTimer){
+                room.roomDeleteTimer = setTimeout(() => {
+                    const currentRoom = rooms[roomId]
+                    if (!currentRoom) return; // Already deleted
+                    // currentRoom.roomDeleteTimer = null //this code ran after timeout completed so now no need tfor this timeout
+                    const currentlyConnectedPlayers = currentRoom.players.filter(
+                        (player) => player.socket &&
+                                    player.socket.readyState === WebSocket.OPEN
+                    )                  
 
+                    if(currentlyConnectedPlayers.length < 2){
+                        console.log(`[BACKEND gameServices] Grace period ended. Deleting room=${roomId}`)
+                        if (currentRoom.timer) {
+                            clearInterval(currentRoom.timer)
+                            currentRoom.timer = null
+                        }
+                        currentRoom.roomDeleteTimer = null//first null the time then delete the fucking room man
+                        delete rooms[roomId]
+                    }else{
+                        
+                    }
+                    
+                }, 5000);
+            }
+            return ;     
+        }
+            // if(recalculatingConnectedPlayers.length === 1){
+            //     //CRITICAL BUG 05 SOLVED HERE
+            //     //When waiting for other players -- waiting for round to start yet -- so timer should not be running in waiting state
+            //     clearInterval(room.timer)
+            //     room.timer = null
+            //     console.log(room.timer)
+            //     //show timer to user aftre how many sec game will end 
+            //     //after timer runs out the timeout checks the player connected again 
+            //     //if less lpayers deleted the room other wise do onthing 
+            //     room.state = ROOM_STATES.waiting;
+            //     for(const player of room.players){
+            //         if(player.socket && player.socket.readyState === WebSocket.OPEN){
+            //             player.socket.send(JSON.stringify({
+            //                 message : "Waiting for players to fucking join"
+            //             }))
+            //         }   
+            //     }
             // }
+            // // if(recalculatingConnectedPlayers.length > 1){
+
+            // // }
 }
 
 // function drawerDisconnected(){
@@ -920,7 +940,7 @@ function scheduleRoomTimeout(room, callback, delay) {
     return timeoutId;
 }
 
-export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord, cleanupRoomTimers }
+export {timer, disconnection ,syncStrokes, handleStrokes ,checkGuess  , startRound , checkWord, cleanupRoomTimers,scheduleRoomTimeout }
 
 
 
