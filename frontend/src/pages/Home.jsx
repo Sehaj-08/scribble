@@ -106,7 +106,7 @@ function Home() {
       <header className="home-header">
         <div className="logo-badge">✏️ Draw &amp; Guess</div>
         <h1 className="game-title">Scribble</h1>
-        <p className="game-subtitle">Play real-time multiplayer drawing and guessing with friends!</p>
+        <p className="game-subtitle practice-highlight">Play real-time multiplayer drawing and guessing with friends!</p>
       </header>
 
       {errorMessage && (
@@ -190,3 +190,9 @@ function Home() {
 }
 
 export default Home
+
+
+
+// hey bro how are you 
+// somebody gonna die in this cage it aint gona be me -- DC
+//
