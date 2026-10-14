@@ -60,6 +60,11 @@ export function initWebSockets(server){
         backendConnCounter++;
         socket.connId = backendConnCounter;
         
+        // Prevent uncaught errors (e.g. maxPayload exceeded) from crashing the server
+        socket.on("error", (err) => {
+            console.warn(`[BACKEND socketManager] Socket #${socket.connId} error: ${err.message}`);
+        });
+
         console.log(`[BACKEND socketManager] Websocket connection #${socket.connId} established`)
         const url = new URL(request.url , "http://localhost:3000")
         const roomId = url.searchParams.get("roomId")

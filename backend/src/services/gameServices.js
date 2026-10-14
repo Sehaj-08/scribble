@@ -398,6 +398,7 @@ function disconnection(playerId , room , roomId,socket){
         if(room.drawer && playerId === room.drawer.playerId){
                 room.state = ROOM_STATES.round_ended
                 clearInterval(room.timer)
+                room.timer = null
                 console.log("drawer left bro")
                 room.state = DRAWER_LEFT.drawer_left
                 
