@@ -19,7 +19,7 @@
   --accent-primary-hover: #4f46e5;
   --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
   --gradient-btn-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  --gradient-btn-primary-hover: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+  /* --gradient-btn-primary-hover: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%); */
   --gradient-card: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
 
   --error-bg: rgba(239, 68, 68, 0.12);
@@ -36,6 +36,9 @@
 
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+
+
 }
 
 * {
@@ -64,7 +67,7 @@ body {
 #root {
   width: 100%;
   max-width: 680px;
-  margin: 0 auto;
+  margin: 0 auto  ;
   padding: 1.5rem;
 }
 
@@ -164,13 +167,13 @@ body {
 
 .home-card,
 .lobby-card {
-  background: var(--gradient-card);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  padding: 2.25rem;
-  transition: var(--transition-smooth);
+    background: var(--gradient-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 2.25rem; 
+    transition: var(--transition-smooth);
 }
 
 .action-section h2 {
@@ -216,13 +219,13 @@ button {
   background: var(--gradient-btn-primary);
   color: #ffffff;
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 1);
 }
 
 .primary-btn:hover:not(:disabled) {
   background: var(--gradient-btn-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 6px 200px rgba(99, 102, 241, 0.45);
 }
 
 .primary-btn:active:not(:disabled) {
@@ -230,11 +233,17 @@ button {
 }
 
 .secondary-btn {
-  padding: 0.85rem 1.5rem;
+  display: inline-flex;
+  flex-direction: column; 
+align-items: center;
+gap: 0.75rem;
+
+  padding: 2rem 4rem;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   border-radius: var(--radius-md);
+  transition: all 0.2s ease-in-out;
 }
 
 .secondary-btn:hover:not(:disabled) {
@@ -242,6 +251,8 @@ button {
   border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
+  
+
 }
 
 .secondary-btn:active:not(:disabled) {

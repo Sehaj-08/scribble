@@ -89,7 +89,7 @@ function Lobby() {
               {roomId && (
                 <button 
                   onClick={handleCopyCode} 
-                  style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px', fontSize: '0.8rem' }}
+                  style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer',padding : "2px 6px", fontSize: '0.8rem' }}
                 >
                   {copySuccess ? 'Copied!' : 'Copy'}
                 </button>
