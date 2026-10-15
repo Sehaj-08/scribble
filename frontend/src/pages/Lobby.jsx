@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRoom } from '../hooks/useRoom.js'
 import * as websocketService from '../websocket/websocketService.js'
-
 /**
  * WHAT: The pre-game Lobby screen (Phase 1.2 placeholder).
  * WHY: Confirms that navigation succeeded and that roomId and playerId are

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { createRoom, joinRoom } from '../services/roomService.js'
 import { useRoom } from '../hooks/useRoom.js'
 
+
 /**
  * WHAT: The Home screen / landing page for players to create or join a game room.
  * WHY: Serves as the starting point (Phase 1.2), coordinating room creation,
@@ -105,7 +106,7 @@ function Home() {
     <div className="home-container">
       <header className="home-header">
         <div className="logo-badge">✏️ Draw &amp; Guess</div>
-        <h1 className="game-title">Scribble</h1>
+        <h1 className="game-title module1-demo">Scribble</h1>
         <p className="game-subtitle practice-highlight">Play real-time multiplayer drawing and guessing with friends!</p>
       </header>
 

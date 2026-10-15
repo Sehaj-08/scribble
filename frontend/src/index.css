@@ -238,9 +238,10 @@ button {
 }
 
 .secondary-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: #ff4757;
   border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
 }
 
 .secondary-btn:active:not(:disabled) {
@@ -615,4 +616,6 @@ button:disabled {
   font-size: 1.4rem;
 } 
 
-  
+.module1-demo{
+  color : orange;
+}
