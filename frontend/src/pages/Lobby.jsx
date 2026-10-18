@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRoom } from '../hooks/useRoom.js'
 import * as websocketService from '../websocket/websocketService.js'
-
 /**
  * WHAT: The pre-game Lobby screen (Phase 1.2 placeholder).
  * WHY: Confirms that navigation succeeded and that roomId and playerId are
@@ -90,7 +89,7 @@ function Lobby() {
               {roomId && (
                 <button 
                   onClick={handleCopyCode} 
-                  style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px', fontSize: '0.8rem' }}
+                  style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer',padding : "2px 6px", fontSize: '0.8rem' }}
                 >
                   {copySuccess ? 'Copied!' : 'Copy'}
                 </button>
