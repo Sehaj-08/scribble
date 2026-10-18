@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useRoom } from '../hooks/useRoom.js'
 import * as websocketService from '../websocket/websocketService.js'
+
 /**
- * WHAT: The pre-game Lobby screen (Phase 1.2 placeholder).
+ * WHAT: The pre-game Lobby screen.
  * WHY: Confirms that navigation succeeded and that roomId and playerId are
  *      accessible from the shared state without losing values after transition.
  *      It also acts as the session layer that manages the WebSocket connection.
+ * STYLE: Skribbl-inspired playful browser game aesthetic matching Home page.
  */
 function Lobby() {
-  const {roomId, playerId, resetRoom, gameState, navigate } = useRoom()
+  const { roomId, playerId, resetRoom, gameState, navigate } = useRoom()
   const [wsStatus, setWsStatus] = useState('disconnected')
   const [copySuccess, setCopySuccess] = useState('')
 
   // Derive values for the Lobby UI
   const isGameStarted = gameState.gameState !== 'WAITING'
 
-  // Map players to include isMe prop erty for UI styling
+  // Map players to include isMe property for UI styling
   const lobbyPlayers = gameState.players.map(p => ({
     ...p,
     isMe: p.playerId === playerId
@@ -23,6 +25,7 @@ function Lobby() {
 
   useEffect(() => {
     console.log("[LOBBY] Rendering players:", lobbyPlayers)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lobbyPlayers.length]) // Only log when player count changes to avoid spam
 
   // Navigate to Game view when round starts
@@ -74,9 +77,12 @@ function Lobby() {
 
   return (
     <div className="lobby-container">
+      {/* Full-viewport Skribbl Doodle Background Wallpaper */}
+      <div className="lobby-bg-canvas" aria-hidden="true" />
+
       <header className="lobby-header">
         <div className="logo-badge">🎮 Game Lobby</div>
-        <h1>Waiting Room</h1>
+        <h1 className="lobby-title">Waiting Room</h1>
         <p className="lobby-subtitle">You have successfully joined the room session!</p>
       </header>
 
@@ -84,12 +90,14 @@ function Lobby() {
         <div className="session-info-grid">
           <div className="info-box">
             <span className="info-label">Room ID</span>
-            <div className="info-value-pill" id="lobby-room-id" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'center' }}>
-              {roomId || '—'}
+            <div className="info-value-pill" id="lobby-room-id">
+              <span className="room-code-text">{roomId || '—'}</span>
               {roomId && (
                 <button 
+                  type="button"
                   onClick={handleCopyCode} 
-                  style={{ background: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer',padding : "2px 6px", fontSize: '0.8rem' }}
+                  className={`copy-code-btn ${copySuccess ? 'copied' : ''}`}
+                  title="Copy room code to clipboard"
                 >
                   {copySuccess ? 'Copied!' : 'Copy'}
                 </button>
@@ -100,39 +108,29 @@ function Lobby() {
 
           <div className="info-box">
             <span className="info-label">Connection Status</span>
-            <div className={`info-value-pill ${wsStatus === 'open' ? 'success' : 'secondary'}`}>
+            <div className={`info-value-pill status-pill ${wsStatus === 'open' ? 'status-open' : 'status-secondary'}`}>
               {wsStatus.toUpperCase()}
             </div>
           </div>
         </div>
 
-        <div className="info-box" style={{ marginTop: '1.5rem', textAlign: 'left' }}>
+        <div className="lobby-players-box">
           <span className="info-label">Connected Players: {lobbyPlayers.length}</span>
-          <ul style={{ listStyleType: 'none', padding: 0, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <ul className="lobby-player-list">
             {lobbyPlayers.map((p, idx) => (
               <li 
                 key={idx} 
-                style={{ 
-                  padding: '0.75rem 1rem', 
-                  background: p.isMe ? '#eef2ff' : '#f8f9fa', 
-                  border: p.isMe ? '1px solid #c7d2fe' : '1px solid #e9ecef',
-                  borderRadius: '6px',
-                  fontWeight: '500',
-                  color: p.isMe ? '#4338ca' : '#495057',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
+                className={`lobby-player-row ${p.isMe ? 'is-me' : ''}`}
               >
-                <span>👤 {p.playerId}</span>
-                {p.isMe && <span style={{ fontSize: '0.85rem', background: '#4338ca', color: 'white', padding: '2px 8px', borderRadius: '12px' }}>You</span>}
+                <span className="player-name">👤 {p.playerId}</span>
+                {p.isMe && <span className="player-you-badge">You</span>}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="lobby-notice" style={{ marginTop: '1.5rem', background: isGameStarted ? '#ecfdf5' : '#fffbeb', borderLeft: isGameStarted ? '4px solid #10b981' : '4px solid #f59e0b' }}>
-          <p style={{ margin: 0, fontWeight: '500', color: isGameStarted ? '#065f46' : '#92400e' }}>
+        <div className={`lobby-notice ${isGameStarted ? 'game-starting' : 'waiting'}`}>
+          <p>
             {isGameStarted ? "🚀 Game Started! Redirecting to game..." : "⏳ Waiting for more players..."}
           </p>
         </div>
@@ -140,7 +138,8 @@ function Lobby() {
         <div className="lobby-actions">
           <button
             id="leave-room-btn"
-            className="secondary-btn leave-btn"
+            type="button"
+            className="secondary-btn leave-btn lobby-leave-btn"
             onClick={handleLeaveRoom}
           >
             ← Leave Room &amp; Return Home
