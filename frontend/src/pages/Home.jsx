@@ -2,11 +2,11 @@ import { useState, useRef } from 'react'
 import { createRoom, joinRoom } from '../services/roomService.js'
 import { useRoom } from '../hooks/useRoom.js'
 
-
 /**
  * WHAT: The Home screen / landing page for players to create or join a game room.
- * WHY: Serves as the starting point (Phase 1.2), coordinating room creation,
- *      room joining, input validation, loading feedback, and navigation to Lobby.
+ * WHY: Serves as the starting point, coordinating room creation, room joining,
+ *      input validation, loading feedback, and navigation to the Lobby.
+ * STYLE: Skribbl-inspired playful browser game aesthetic.
  */
 function Home() {
   const { setRoomData, navigate } = useRoom()
@@ -15,7 +15,7 @@ function Home() {
   const [loadingAction, setLoadingAction] = useState(null) // 'create' | 'join' | null
   const [errorMessage, setErrorMessage] = useState('')
 
-  // Add a ref-based lock to prevent double-clicks bypassing async state updates
+  // Ref-based lock to prevent rapid double-clicks bypassing async state updates
   const isActionLocked = useRef(false)
 
   const isBusy = loadingAction !== null
@@ -32,8 +32,8 @@ function Home() {
 
   /**
    * WHAT: Handles clicking the "Create Room" button.
-   * WHY: Triggers GET  , stores returned roomId & playerId,
-   *      and redirects to the Lobby screen.
+   * WHY: Triggers roomService.createRoom(), stores returned roomId & playerId,
+   *      and navigates to the Lobby screen.
    */
   const handleCreateRoom = async () => {
     if (isBusy || isActionLocked.current) return
@@ -57,8 +57,8 @@ function Home() {
 
   /**
    * WHAT: Handles clicking the "Join Room" button or pressing Enter.
-   * WHY: Validates input, triggers POST /api/rooms/join_rooms/:room_id,
-   *      stores roomId & playerId, and redirects to Lobby.
+   * WHY: Validates input, triggers roomService.joinRoom(roomId),
+   *      stores roomId & playerId, and navigates to the Lobby.
    */
   const handleJoinRoom = async (e) => {
     if (e) e.preventDefault()
@@ -70,7 +70,7 @@ function Home() {
     // Client-side validation for empty room code
     if (!trimmedId) {
       setErrorMessage('Please enter a valid Room ID to join.')
-      isActionLocked.current = false   // unlocks the lock which earlier was used for stopping user for clicking a button multiple times
+      isActionLocked.current = false
       return
     }
 
@@ -104,60 +104,74 @@ function Home() {
 
   return (
     <div className="home-container">
+      {/* Full-viewport Skribbl Doodle Background Wallpaper */}
+      <div className="home-bg-canvas" aria-hidden="true" />
+
+      {/* Playful Game Branding / Header */}
       <header className="home-header">
-        <div className="logo-badge">✏️ Draw &amp; Guess</div>
-        <h1 className="game-title module1-demo">Scribble</h1>
-        <p className="game-subtitle practice-highlight">Play real-time multiplayer drawing and guessing with friends!</p>
+        <div className="home-logo-wrap">
+          <h1 className="skribbl-logo" aria-label="Scribble">
+            <span className="logo-letter l-1">S</span>
+            <span className="logo-letter l-2">c</span>
+            <span className="logo-letter l-3">r</span>
+            <span className="logo-letter l-4">i</span>
+            <span className="logo-letter l-5">b</span>
+            <span className="logo-letter l-6">b</span>
+            <span className="logo-letter l-7">l</span>
+            <span className="logo-letter l-8">e</span>
+            <span className="logo-pencil" aria-hidden="true">✏️</span>
+          </h1>
+          <p className="skribbl-tagline">Multiplayer Drawing &amp; Guessing Game</p>
+        </div>
       </header>
 
-      {errorMessage && (
-        <div className="error-alert" role="alert" id="home-error-banner">
-          <span className="error-icon">⚠️</span>
-          <span className="error-text">{errorMessage}</span>
-        </div>
-      )}
-
+      {/* Main Action Panel */}
       <div className="home-card">
-        {/* Create Room Section */}
+        {errorMessage && (
+          <div className="error-alert" role="alert" id="home-error-banner">
+            <span className="error-icon" aria-hidden="true">⚠️</span>
+            <span className="error-text">{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Create Room Section - Primary Action */}
         <section className="action-section create-section">
-          <h2>Host a New Game</h2>
-          <p className="section-desc">Create a private room and invite your friends to join.</p>
           <button
             id="create-room-btn"
+            type="button"
             className="primary-btn create-btn"
             onClick={handleCreateRoom}
             disabled={isBusy}
           >
             {loadingAction === 'create' ? (
               <span className="btn-content">
-                <span className="spinner" aria-hidden="true"></span>
-                Creating Room...
+                <span className="spinner" aria-hidden="true" />
+                <span>Creating Room...</span>
               </span>
             ) : (
               <span className="btn-content">
-                <span>➕</span> Create Room
+                <span className="btn-icon plus-icon" aria-hidden="true">+</span>
+                <span>Create Room</span>
               </span>
             )}
           </button>
         </section>
 
-        <div className="divider">
+        {/* Visual Divider */}
+        <div className="divider" role="separator">
           <span>OR</span>
         </div>
 
-        {/* Join Room Section */}
+        {/* Join Room Section - Secondary Action */}
         <section className="action-section join-section">
-          <h2>Join Existing Game</h2>
-          <p className="section-desc">Have a room code? Enter it below to join the match.</p>
-          
-          <form className="join-form" onSubmit={handleJoinRoom}>
+          <form className="join-form" onSubmit={handleJoinRoom} noValidate>
             <div className="input-group">
-              <label htmlFor="room-id-input" className="sr-only">Room ID</label>
+              <label htmlFor="room-id-input" className="sr-only">Room Code</label>
               <input
                 id="room-id-input"
                 type="text"
                 className="room-input"
-                placeholder="Enter 5-character Room ID"
+                placeholder="Enter room code"
                 value={roomIdInput}
                 onChange={handleInputChange}
                 disabled={isBusy}
@@ -173,27 +187,27 @@ function Home() {
               >
                 {loadingAction === 'join' ? (
                   <span className="btn-content">
-                    <span className="spinner" aria-hidden="true"></span>
-                    Joining...
+                    <span className="spinner" aria-hidden="true" />
+                    <span>Joining...</span>
                   </span>
                 ) : (
                   <span className="btn-content">
-                    <span>🚀</span> Join Room
+                    <span className="btn-icon" aria-hidden="true">🚀</span>
+                    <span>Join Room</span>
                   </span>
                 )}
               </button>
             </div>
           </form>
         </section>
+
+        {/* Compact Footer Note */}
+        <footer className="home-card-footer">
+          <span>Instant Play &bull; No Login Required</span>
+        </footer>
       </div>
     </div>
   )
 }
 
 export default Home
-
-
-
-// hey bro how are you 
-// somebody gonna die in this cage it aint gona be me -- DC
-//
