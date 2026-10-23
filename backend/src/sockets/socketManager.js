@@ -1,10 +1,10 @@
-    import {WebSocketServer , WebSocket} from "ws"
+import {WebSocketServer , WebSocket} from "ws"
 import {rooms} from "../store/roomStore.js"
 import {ROOM_STATES,STROKE_EVENTS,GUESS_EVENTS , CHOOSE_WORD , CURRENT_STATE_SNAPSHOT} from "../config/constants.js"
 import {timer , disconnection ,syncStrokes,  startRound,handleStrokes , checkGuess , checkWord, scheduleRoomTimeout} from "../services/gameServices.js" 
 import  {validator} from "../services/message.validator.js"
 let backendConnCounter = 0
-
+const HEARTBEAT_INTERVAL_MS = 30_000;
 //adding func below for applyrate limiting mesdsage specific 
 
 const RATE_LIMITS = {
@@ -57,6 +57,11 @@ export function initWebSockets(server){
         maxPayload: 1024 //  Maximum incoming message size: 1 KiB
     })
     wss.on("connection" , (socket,request)=> {
+   socket.isAlive = true;
+
+    socket.on("pong", () => {
+        socket.isAlive = true;
+    });
         backendConnCounter++;
         socket.connId = backendConnCounter;
         
@@ -299,6 +304,44 @@ export function initWebSockets(server){
     // others see the timer and msg that game has stated
     })
     
+    // Send a heartbeat to connected clients every 30 seconds.
+//THISS HEARTBEAT IS TO CHECK IF PLAYERS ARE STILL CONNECTED THEN DONT LET RENDER MAKE CONNECTION IDLE AND END IT 
+const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((socket) => {
+        // Ignore sockets that are already closing or closed.
+        if (socket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        // If the previous ping received no pong, terminate the stale socket.
+        if (socket.isAlive === false) {
+            console.warn(
+                `[BACKEND socketManager] Socket #${socket.connId} did not respond to heartbeat`
+            );
+
+            socket.terminate();
+            return;
+        }
+
+        // Expect the client to respond to the next ping.
+        socket.isAlive = false;
+
+        socket.ping((error) => {
+            if (error) {
+                console.warn(
+                    `[BACKEND socketManager] Ping failed for socket #${socket.connId}: ${error.message}`
+                );
+
+                socket.terminate();
+            }
+        });
+    });
+}, HEARTBEAT_INTERVAL_MS);
+heartbeatInterval.unref();
+// Stop the timer when the WebSocket server closes.
+wss.on("close", () => {
+    clearInterval(heartbeatInterval);
+});
     return wss; // LETTING SERVER CLOSES GRACEFULLY SO NEXT TIME IT CAN RESTADRT PREPERLY 
 
  }
