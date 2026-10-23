@@ -21,6 +21,10 @@ app.use(cors({
 //req parsing
 app.use(express.json())
 
+
+app.get("/health" , (req,res) => {
+    res.status(200).json({status : "ok"})
+})
 //using routes
 app.use("/api/rooms",room_router)
 
@@ -32,7 +36,7 @@ const wss = initWebSockets(server)
 
 
 //server listening
-server.listen(port ,() =>{
+server.listen(port ,"0.0.0.0" ,() =>{
     console.log(`Server has started on port ${port} you little brattt!!!`)
 } )
 
